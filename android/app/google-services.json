@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "198287293546",
+    "project_id": "campju-345fe",
+    "storage_bucket": "campju-345fe.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:198287293546:android:b879f52eb72ef26eac1e13",
+        "android_client_info": {
+          "package_name": "com.example.campju"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "198287293546-cmuk96j584i21qbqh4bpp55lq1kmc0b9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.campju",
+            "certificate_hash": "492e6490314dded71c2cc6f09d05ffe9c9459605"
+          }
+        },
+        {
+          "client_id": "198287293546-2ein68d069hds9h1hmvpt2073ucnbv21.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB-kn9uslNkWZ9oh0CEbXqNCAoUcITAaWg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "198287293546-2ein68d069hds9h1hmvpt2073ucnbv21.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "198287293546-l9dl0sltai57n2flnqbrqu4tphhktksr.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.campju"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
