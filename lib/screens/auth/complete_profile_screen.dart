@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/routes/app_routes.dart';
 import '../../../models/user_model.dart';
 import '../../../services/auth_provider.dart';
+import '../../../core/routes/app_routes.dart';
+import '../../../core/widgets/custom_button.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CompleteProfileScreen extends StatefulWidget {
   const CompleteProfileScreen({super.key});
@@ -29,7 +31,6 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   String? _selectedSexo;
   DateTime? _fechaIngresoPrograma;
   String? _selectedRango;
-  bool _isLoading = false;
 
   final List<String> _municipiosCundinamarca = [
     'Agua de Dios', 'Albán', 'Anapoima', 'Anolaima', 'Apulo', 'Arbeláez',
@@ -131,32 +132,65 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     }
   }
 
-  Future<void> _saveProfile() async {
-    if (!_formKey.currentState!.validate()) return;
+Future<void> _saveProfile() async {
+    debugPrint('=== INICIO GUARDADO PERFIL ===');
+
+    if (!_formKey.currentState!.validate()) {
+      debugPrint('Validación formulario falló');
+      return;
+    }
 
     if (_selectedMunicipio == null ||
         _fechaNacimiento == null ||
         _selectedTipoDocumento == null ||
         _selectedSexo == null ||
         _selectedRango == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor completa todos los campos obligatorios')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Por favor completa todos los campos obligatorios')),
+        );
+      }
+      debugPrint('Campos obligatorios faltantes');
       return;
     }
 
     if (_esMenorDeEdad && (_nombreAcudienteController.text.isEmpty || _telefonoAcudienteController.text.isEmpty)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Como eres menor de edad, debes completar los datos del acudiente')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Como eres menor de edad, debes completar los datos del acudiente')),
+        );
+      }
+      debugPrint('Datos acudiente faltantes para menor');
       return;
     }
 
-    setState(() => _isLoading = true);
+    // Mostrar loading dialog
+    late bool dialogClosed = false;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => WillPopScope(
+        onWillPop: () async => false,
+        child: AlertDialog(
+          content: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: AppColors.primary),
+              Padding(
+                padding: const EdgeInsets.only(left: 20.0),
+                child: Text('Completando tu perfil...', style: TextStyle(fontSize: 16)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ).then((_) => dialogClosed = true);
 
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final user = authProvider.user;
+
+      debugPrint('Usuario encontrado: ${user?.id}');
 
       if (user == null) throw Exception('Usuario no encontrado');
 
@@ -196,29 +230,69 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         updatedAt: DateTime.now(),
       );
 
+      debugPrint('Datos user preparados, guardando en Firestore...');
+
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.id)
-          .update(updatedUser.toJson());
+          .set(updatedUser.toJson(), SetOptions(merge: true))
+          .timeout(
+            const Duration(seconds: 45),
+            onTimeout: () {
+              throw Exception('Timeout al guardar perfil (45s). Verifica conexión.');
+            },
+          );
 
-      authProvider.setUser(updatedUser);
+      debugPrint('Perfil guardado en Firestore exitosamente');
 
-      if (mounted) {
+      // Force refresh desde Firestore
+      final refreshedDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.id)
+          .get();
+      final refreshedUser = UserModel.fromJson(refreshedDoc.data()!);
+      debugPrint('Perfil refrescado - perfilCompleto: ${refreshedUser.perfilCompleto}');
+
+      if (!refreshedUser.perfilCompleto) {
+        throw Exception('Firestore no actualizó perfilCompleto a true');
+      }
+
+      authProvider.setUser(refreshedUser);
+
+      // Esperar cierre dialog
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (!dialogClosed && context.mounted) {
+        Navigator.of(context).pop();
+      }
+
+      debugPrint('Navegando directamente a PERFIL...');
+
+      await Future.delayed(const Duration(milliseconds: 1200));
+
+      if (context.mounted) {
         Navigator.pushNamedAndRemoveUntil(
           context,
-          AppRoutes.home,
+          AppRoutes.perfil,
           (route) => false,
         );
       }
     } catch (e) {
+      debugPrint('ERROR AL GUARDAR PERFIL: $e');
+      if (context.mounted && !dialogClosed) {
+        Navigator.of(context).pop();
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al guardar el perfil: $e')),
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 6),
+            action: SnackBarAction(
+              label: 'Reintentar',
+              onPressed: _saveProfile,
+            ),
+          ),
         );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
       }
     }
   }
@@ -522,23 +596,10 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                   const SizedBox(height: 30),
                 ],
 
-                // Botón guardar
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _saveProfile,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text(
-                          'Completar Perfil',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
+                CustomButton(
+                  label: 'Completar Perfil',
+                  onPressed: _saveProfile,
+                  height: 54,
                 ),
               ],
             ),

@@ -62,7 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
         if (mounted) {
           Navigator.pushNamedAndRemoveUntil(
             context,
-            AppRoutes.home,
+            '/',
             (route) => false,
           );
         }
@@ -126,7 +126,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(
           context,
-          AppRoutes.home,
+          '/',
           (route) => false,
         );
       }

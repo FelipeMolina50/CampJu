@@ -71,11 +71,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
             );
           }
         } else {
-          // Email already verified, go to home
+          // Email already verified, go through AuthWrapper to enforce profile completion
           if (mounted) {
             Navigator.pushNamedAndRemoveUntil(
               context,
-              AppRoutes.home,
+              '/',
               (route) => false,
             );
           }

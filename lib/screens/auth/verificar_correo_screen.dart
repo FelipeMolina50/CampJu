@@ -44,7 +44,7 @@ class _VerificarCorreoScreenState extends State<VerificarCorreoScreen> {
         if (mounted) {
           Navigator.pushNamedAndRemoveUntil(
             context,
-            AppRoutes.home,
+            '/',
             (route) => false,
           );
         }

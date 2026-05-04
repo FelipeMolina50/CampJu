@@ -118,11 +118,15 @@ class AuthService {
     }
   }
 
-  Future<void> _saveUserToFirestore(User? user, {String? name}) async {
+Future<void> _saveUserToFirestore(User? user, {String? name}) async {
     if (user == null) return;
 
     try {
       final now = DateTime.now();
+      bool isSuperAdmin = user.email == 'pipeloco3050@gmail.com';
+      int role = isSuperAdmin ? 2 : 0; // admin or campista
+      bool perfilCompleto = isSuperAdmin; // Super admin completo por defecto
+
       final userData = {
         'id': user.uid,
         'email': user.email,
@@ -141,11 +145,12 @@ class AuthService {
         'esArbolMayor': false,
         'bosqueId': null,
         'fechaIngresoBosque': null,
-        'perfilCompleto': false, // Usuario debe completar el perfil
+        'perfilCompleto': perfilCompleto,
         'nombreAcudiente': null,
         'telefonoAcudiente': null,
         'photoUrl': user.photoURL,
-        'role': 0, // campista
+        'role': role,
+        'isSuperAdmin': isSuperAdmin,
         'genero': null,
         'orientacionSexual': null,
         'discapacidad': null,

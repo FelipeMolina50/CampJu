@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_styles.dart';
+import '../../core/routes/app_routes.dart';
 import '../../core/widgets/bottom_navbar.dart';
 import '../../screens/bosque/bosque_screen.dart';
 import '../../screens/cursos/cursos_screen.dart';
 import '../../screens/perfil/perfil_screen.dart';
+import '../../services/auth_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -42,6 +44,41 @@ class _HomeScreenState extends State<HomeScreen> {
     const PerfilScreen(),
   ];
 
+  void _onTabTap(BuildContext context, int index) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final user = authProvider.user;
+
+    if (index == 3 && user != null && !user.perfilCompleto) {
+      showDialog<void>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('Completa tu perfil'),
+            content: const Text(
+              'Antes de ver tu perfil, debes completar tu información personal. Puedes completar el perfil ahora o regresar al inicio.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Regresar'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  Navigator.pushNamed(context, AppRoutes.completeProfile);
+                },
+                child: const Text('Completar ahora'),
+              ),
+            ],
+          );
+        },
+      );
+      return;
+    }
+
+    setState(() => _currentIndex = index);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -56,7 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       bottomNavigationBar: BottomNavBar(
         currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
+        onTap: (index) => _onTabTap(context, index),
       ),
     );
   }

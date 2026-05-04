@@ -204,7 +204,7 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.id)
-          .update(updatedUser.toJson());
+          .set(updatedUser.toJson(), SetOptions(merge: true));
 
       authProvider.setUser(updatedUser);
 

@@ -34,12 +34,57 @@ class BosqueService {
     }
   }
 
-  Future<void> crearBosque(BosqueModel bosque) async {
+  Future<void> crearBosque(BosqueModel bosque, String userId) async {
     try {
+      // Validar admin
+      final userDoc = await _firestoreService.getDocument('users', userId);
+      final userData = userDoc.data() as Map<String, dynamic>?;
+      if (userData == null || (userData['role'] ?? 0) != 2) {
+        throw Exception('Solo administradores pueden crear bosques');
+      }
+      
+      // Verificar 1 bosque máximo por admin
+      final existingBosques = await _firestoreService.getCollectionDocuments(
+        _bosqueCollection,
+        where: (ref) => ref.where('liderId', isEqualTo: userId),
+      );
+      if (existingBosques.docs.isNotEmpty) {
+        throw Exception('Ya tienes un bosque. Un admin solo puede tener uno.');
+      }
+      
+      // Crear con liderId desde constructor
+      final bosqueConLider = BosqueModel(
+        id: bosque.id,
+        nombre: bosque.nombre,
+        descripcion: bosque.descripcion,
+        zona: bosque.zona,
+        liderId: userId,
+        fotoUrl: bosque.fotoUrl,
+        miembros: 1, // Empieza con 1 miembro
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      
       await _firestoreService.setDocument(
         _bosqueCollection,
         bosque.id,
-        bosque.toJson(),
+        bosqueConLider.toJson(),
+      );
+      
+      // Auto-agregar como primer miembro/coordinador
+      final miembro = MiembroModel(
+        id: '${userId}_${bosque.id}',
+        bosqueId: bosque.id,
+        usuarioId: userId,
+        nombre: userData['name'] ?? 'Admin',
+        rol: 'coordinador',
+        fechaIngreso: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      await _firestoreService.setDocument(
+        _miembroCollection,
+        miembro.id,
+        miembro.toJson(),
       );
     } catch (e) {
       rethrow;

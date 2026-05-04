@@ -63,11 +63,29 @@ class AuthProvider extends ChangeNotifier {
     });
   }
 
+  StreamSubscription<DocumentSnapshot>? _userStream;
+  
   Future<UserModel?> _loadUserData(String uid) async {
     try {
       final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
       if (doc.exists) {
-        return UserModel.fromJson(doc.data()!);
+        final userModel = UserModel.fromJson(doc.data()!);
+        // Setup real-time listener
+        _userStream?.cancel();
+        _userStream = FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .snapshots()
+            .listen((snapshot) {
+          if (snapshot.exists) {
+            final updatedUser = UserModel.fromJson(snapshot.data()!);
+            if (_user?.id == updatedUser.id) {
+              _user = updatedUser;
+              notifyListeners();
+            }
+          }
+        });
+        return userModel;
       }
     } catch (e) {
       print('Error loading user data: $e');
@@ -282,9 +300,10 @@ class AuthProvider extends ChangeNotifier {
     return '/home';
   }
 
-  @override
+@override
   void dispose() {
     _authSubscription?.cancel();
+    _userStream?.cancel();
     super.dispose();
   }
 }

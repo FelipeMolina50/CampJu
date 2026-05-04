@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_provider.dart';
-import '../../core/routes/app_routes.dart';
 import 'login_screen.dart';
 import 'verificar_correo_screen.dart';
-import 'complete_profile_screen.dart';
 import '../home/home_screen.dart';
 
 class AuthWrapper extends StatelessWidget {
@@ -27,12 +25,7 @@ class AuthWrapper extends StatelessWidget {
           return const VerificarCorreoScreen();
         }
 
-        // 3. Autenticado y email verificado pero perfil incompleto → CompleteProfileScreen
-        if (!user.perfilCompleto) {
-          return const CompleteProfileScreen();
-        }
-
-        // 4. Todo correcto → HomeScreen
+        // 3. Autenticado y email verificado → HomeScreen
         return const HomeScreen();
       },
     );
