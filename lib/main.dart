@@ -20,6 +20,12 @@ import 'screens/bosque/bosque_detalle_screen.dart';
 import 'screens/cursos/curso_detalle_screen.dart';
 import 'services/messaging_service.dart';
 import 'screens/bosque/bosque_solicitud_screen.dart';
+import 'screens/perfil/configuracion_screen.dart';
+import 'screens/perfil/notificaciones_screen.dart';
+import 'screens/perfil/privacidad_seguridad_screen.dart';
+import 'screens/perfil/ayuda_soporte_screen.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
@@ -41,6 +47,16 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         title: 'CampJu',
         debugShowCheckedModeBanner: false,
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('es', 'CO'),
+          Locale('es', 'ES'),
+          Locale('en', 'US'),
+        ],
         theme: ThemeData(
           primarySwatch: Colors.green,
           useMaterial3: true,
@@ -79,6 +95,10 @@ class MyApp extends StatelessWidget {
               ? const EditarPerfilScreen()
               : const LoginScreen(),
           ),
+          AppRoutes.configuracion: (context) => const ConfiguracionScreen(),
+          AppRoutes.notificaciones: (context) => const NotificacionesScreen(),
+          AppRoutes.privacidad: (context) => const PrivacidadSeguridadScreen(),
+          AppRoutes.ayuda: (context) => const AyudaSoporteScreen(),
         },
         onGenerateRoute: (settings) {
           final uri = Uri.parse(settings.name ?? '');

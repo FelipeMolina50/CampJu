@@ -29,12 +29,22 @@ class AuthProvider extends ChangeNotifier {
 
   void _initAuthListener() {
     _authSubscription =
-        FirebaseAuth.instance.authStateChanges().listen((User? firebaseUser) async {
+        FirebaseAuth.instance.userChanges().listen((User? firebaseUser) async {
       if (firebaseUser != null) {
         // Cargar datos completos del usuario desde Firestore
         final userData = await _loadUserData(firebaseUser.uid);
+        
         if (userData != null) {
-          _user = userData;
+          // Sync email verification if Auth says verified but Firestore doesn't
+          if (firebaseUser.emailVerified && !userData.emailVerified) {
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(firebaseUser.uid)
+                .update({'emailVerified': true});
+            _user = userData.copyWith(emailVerified: true);
+          } else {
+            _user = userData;
+          }
         } else {
           // Usuario básico si no hay datos en Firestore
           _user = UserModel(
@@ -280,6 +290,46 @@ class AuthProvider extends ChangeNotifier {
     await _authService.logout();
   }
 
+  Future<bool> reauthenticate(String password) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      await _authService.reauthenticate(password);
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } on FirebaseAuthException catch (e) {
+      _errorMessage = _authService.mapAuthError(e.code);
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> deleteAccount() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      await _authService.deleteAccount();
+      _user = null;
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   // Método para determinar la ruta inicial basada en el estado del usuario
   String getInitialRoute() {
     if (_user == null) {
@@ -298,6 +348,18 @@ class AuthProvider extends ChangeNotifier {
 
     // 3. Si todo ok → ir al home
     return '/home';
+  }
+
+  /// Fuerza la recarga de los datos del usuario desde Firestore
+  Future<void> reloadUser() async {
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    if (firebaseUser != null) {
+      final userData = await _loadUserData(firebaseUser.uid);
+      if (userData != null) {
+        _user = userData;
+        notifyListeners();
+      }
+    }
   }
 
 @override

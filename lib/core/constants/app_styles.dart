@@ -21,6 +21,7 @@ class AppStyles {
   static TextStyle textXl = _baseMulish(20, FontWeight.w500, 30, AppColors.textPrimary);
   static TextStyle text2Xl = _baseMulish(24, FontWeight.w500, 36, AppColors.textPrimary);
   static TextStyle text3Xl = _baseMulish(30, FontWeight.w500, 45, AppColors.textPrimary);
+  static TextStyle textSmall = textSm;
 
   // Estilos para widgets
   static TextStyle labelLarge = textLg.copyWith(fontWeight: FontWeight.w400);
@@ -30,6 +31,8 @@ class AppStyles {
 
   static TextStyle bodyLarge = textLg;
   static TextStyle bodyMedium = textBase;
+  static TextStyle heading2 = text2Xl.copyWith(fontWeight: FontWeight.bold);
+  static TextStyle heading3 = textXl.copyWith(fontWeight: FontWeight.w600);
   static TextStyle heading4 = text3Xl.copyWith(fontWeight: FontWeight.w600);
 
   // --- REDONDEO (Border Radius) ---

@@ -36,6 +36,13 @@ class _VerificarCorreoScreenState extends State<VerificarCorreoScreen> {
 
   void _startVerificationCheck() {
     _timer = Timer.periodic(const Duration(seconds: 5), (timer) async {
+      await _checkVerificationStatus(isManual: false);
+    });
+  }
+
+  Future<void> _checkVerificationStatus({bool isManual = false}) async {
+    if (isManual) setState(() => _isLoading = true);
+    try {
       await FirebaseAuth.instance.currentUser?.reload();
       final user = FirebaseAuth.instance.currentUser;
       if (user != null && user.emailVerified) {
@@ -47,8 +54,26 @@ class _VerificarCorreoScreenState extends State<VerificarCorreoScreen> {
             (route) => false,
           );
         }
+      } else if (isManual && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('El correo aún no ha sido verificado.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
       }
-    });
+    } catch (e) {
+      debugPrint('Error reloading user: $e');
+      if (isManual && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error de conexión. Intenta de nuevo.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+    if (isManual && mounted) setState(() => _isLoading = false);
   }
 
   Future<void> _reenviarCorreo() async {
@@ -194,14 +219,23 @@ class _VerificarCorreoScreenState extends State<VerificarCorreoScreen> {
               ),
               const SizedBox(height: 32),
               CustomButton(
+                label: 'Ya verifiqué mi correo',
+                onPressed: _isLoading ? null : () => _checkVerificationStatus(isManual: true),
+                isLoading: _isLoading,
+                height: 54,
+              ),
+              const SizedBox(height: 16),
+              CustomButton(
                 label: _isLoading
                     ? 'Enviando...'
                     : _resendCooldown > 0
-                        ? 'Espera ${_resendCooldown}s'
+                        ? 'Reenviar en ${_resendCooldown}s'
                         : 'Reenviar Correo',
                 onPressed: (_isLoading || _resendCooldown > 0) ? null : _reenviarCorreo,
                 isLoading: _isLoading,
                 height: 54,
+                backgroundColor: Colors.transparent,
+                textColor: AppColors.primary,
               ),
               const SizedBox(height: 16),
               TextButton(

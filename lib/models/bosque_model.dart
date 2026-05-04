@@ -38,9 +38,22 @@ class BosqueModel {
       liderId: json['liderId'] as String,
       fotoUrl: json['fotoUrl'] as String?,
       miembros: json['miembros'] as int? ?? 0,
-      createdAt: (json['createdAt'] as Timestamp?)?.toDate() ?? DateTime.parse(json['createdAt'] as String),
-      updatedAt: (json['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.parse(json['updatedAt'] as String),
+      createdAt: _parseDate(json['createdAt']),
+      updatedAt: _parseDate(json['updatedAt']),
     );
+  }
+
+  static DateTime _parseDate(dynamic dateData) {
+    if (dateData == null) return DateTime.now();
+    if (dateData is Timestamp) return dateData.toDate();
+    if (dateData is String) {
+      try {
+        return DateTime.parse(dateData);
+      } catch (_) {
+        return DateTime.now();
+      }
+    }
+    return DateTime.now();
   }
 
   factory BosqueModel.fromFirestore(DocumentSnapshot doc) {

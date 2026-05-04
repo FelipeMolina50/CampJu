@@ -8,6 +8,8 @@ import '../../screens/cursos/cursos_screen.dart';
 import '../../screens/perfil/perfil_screen.dart';
 import '../../services/auth_provider.dart';
 
+import 'dashboard_screen.dart';
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -19,26 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
   final List<Widget> _tabs = [
-    const Center(
-      child: Padding(
-        padding: EdgeInsets.all(20.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              'Home',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Banner, actividades y novedades pendientes de implementar',
-              style: TextStyle(fontSize: 18),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    ),
+    const DashboardScreen(),
     const BosqueScreen(),
     const CursosScreen(),
     const PerfilScreen(),
@@ -82,11 +65,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('CampJu'),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-      ),
       body: IndexedStack(
         index: _currentIndex,
         children: _tabs,

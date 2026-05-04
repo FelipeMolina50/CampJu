@@ -28,22 +28,22 @@ class PerfilScreen extends StatelessWidget {
       {
         'icon': Icons.settings,
         'label': 'Configuración',
-        'action': () {},
+        'action': () => Navigator.pushNamed(context, AppRoutes.configuracion),
       },
       {
         'icon': Icons.notifications,
         'label': 'Notificaciones',
-        'action': () {},
+        'action': () => Navigator.pushNamed(context, AppRoutes.notificaciones),
       },
       {
         'icon': Icons.security,
         'label': 'Privacidad y Seguridad',
-        'action': () {},
+        'action': () => Navigator.pushNamed(context, AppRoutes.privacidad),
       },
       {
         'icon': Icons.help,
         'label': 'Ayuda y Soporte',
-        'action': () {},
+        'action': () => Navigator.pushNamed(context, AppRoutes.ayuda),
       },
     ];
 
@@ -81,23 +81,39 @@ class PerfilScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Stack(
                 children: [
-                  Text(
-                    'Mi Perfil',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Mi Perfil',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Administra tu cuenta',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ],
                   ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Administra tu cuenta',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white70,
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: IconButton(
+                      icon: const Icon(Icons.logout, color: Colors.white),
+                      onPressed: () async {
+                        await authProvider.logout();
+                        handleLogout();
+                      },
+                      tooltip: 'Cerrar Sesión',
                     ),
                   ),
                 ],
@@ -134,10 +150,7 @@ class PerfilScreen extends StatelessWidget {
                                 : null,
                             backgroundColor: AppColors.primary,
                             child: user.photoUrl == null
-                                ? const Text(
-                                    '👤',
-                                    style: TextStyle(fontSize: 48),
-                                  )
+                                ? const Icon(Icons.person, size: 48, color: Colors.white)
                                 : null,
                           ),
                           const SizedBox(height: 16),
@@ -171,16 +184,10 @@ class PerfilScreen extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              Text(
-                                user.rangoEmoji,
-                                style: const TextStyle(fontSize: 20),
-                              ),
+                              Icon(Icons.military_tech, color: Colors.amber[700], size: 24),
                               if (user.esArbolMayor) ...[
                                 const SizedBox(width: 8),
-                                const Text(
-                                  '🌳',
-                                  style: TextStyle(fontSize: 20),
-                                ),
+                                const Icon(Icons.eco, color: Colors.green, size: 24),
                               ],
                             ],
                           ),
@@ -206,10 +213,7 @@ class PerfilScreen extends StatelessWidget {
                             const CircleAvatar(
                               radius: 24,
                               backgroundColor: AppColors.primary,
-                              child: Text(
-                                '🌲',
-                                style: TextStyle(fontSize: 24),
-                              ),
+                              child: Icon(Icons.forest, color: Colors.white, size: 24),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -225,7 +229,7 @@ class PerfilScreen extends StatelessWidget {
                                           ),
                                         ),
                                         Text(
-                                          'Bosque ${user.bosqueId}', // TODO: Obtener nombre real del bosque
+                                          'Asignado', 
                                           style: const TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.w500,
@@ -246,7 +250,7 @@ class PerfilScreen extends StatelessWidget {
                                         ),
                                         ElevatedButton(
                                           onPressed: () {
-                                            // TODO: Navegar a pantalla de buscar bosque
+                                            Navigator.pushNamed(context, AppRoutes.bosque);
                                           },
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: AppColors.primary,
@@ -281,8 +285,8 @@ class PerfilScreen extends StatelessWidget {
                 mainAxisSpacing: 12,
                 crossAxisSpacing: 12,
                 children: [
-                  _buildStatCard('0', 'Cursos\ncompletados', AppColors.primary), // TODO: Obtener datos reales
-                  _buildStatCard('0', 'Eventos\nasistidos', AppColors.location), // TODO: Obtener datos reales
+                  _buildStatCard('0', 'Cursos\ncompletados', AppColors.primary),
+                  _buildStatCard('0', 'Eventos\nasistidos', AppColors.location),
                   _buildStatCard('${user.mesesEnPrograma}', 'Meses en\nprograma', AppColors.textSecondary),
                 ],
               ),
@@ -397,7 +401,7 @@ class PerfilScreen extends StatelessWidget {
 
   Widget _buildStatCard(String value, String label, Color color) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -412,22 +416,28 @@ class PerfilScreen extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: color,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),

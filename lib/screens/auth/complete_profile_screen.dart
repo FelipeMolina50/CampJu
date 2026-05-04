@@ -271,7 +271,7 @@ Future<void> _saveProfile() async {
       if (context.mounted) {
         Navigator.pushNamedAndRemoveUntil(
           context,
-          AppRoutes.perfil,
+          AppRoutes.home,
           (route) => false,
         );
       }

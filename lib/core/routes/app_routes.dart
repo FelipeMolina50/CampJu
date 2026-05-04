@@ -24,4 +24,8 @@ class AppRoutes {
   
   // Perfil routes
   static const String editarPerfil = '/editar-perfil';
+  static const String configuracion = '/configuracion';
+  static const String notificaciones = '/notificaciones';
+  static const String privacidad = '/privacidad';
+  static const String ayuda = '/ayuda';
 }

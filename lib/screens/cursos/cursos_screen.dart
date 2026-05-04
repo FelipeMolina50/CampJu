@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/routes/app_routes.dart';
+import '../../../services/auth_provider.dart';
 
 // Modelo temporal para la vista (imita la interfaz solicitada)
 class ViewCourse {
@@ -83,6 +86,18 @@ class _CursosScreenState extends State<CursosScreen> {
     return 'Comenzar Curso';
   }
 
+  Future<void> _handleLogout(BuildContext context) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    await authProvider.logout();
+    if (context.mounted) {
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.login,
+        (route) => false,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final filteredCourses = _courses.where((c) {
@@ -139,43 +154,57 @@ class _CursosScreenState extends State<CursosScreen> {
           ),
           child: SafeArea(
             bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.chevron_left, color: Colors.white, size: 24),
-                        SizedBox(width: 4),
-                        Text('Volver',
-                            style: TextStyle(color: Colors.white, fontSize: 15)),
-                      ],
-                    ),
+            child: Stack(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (Navigator.canPop(context))
+                        GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.chevron_left, color: Colors.white, size: 24),
+                              SizedBox(width: 4),
+                              Text('Volver',
+                                  style: TextStyle(color: Colors.white, fontSize: 15)),
+                            ],
+                          ),
+                        ),
+                      const Spacer(),
+                      const Text(
+                        'Cursos',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 30,
+                          fontWeight: FontWeight.bold,
+                          height: 1.1,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Desarrolla tus habilidades',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
                   ),
-                  const Spacer(),
-                  const Text(
-                    'Cursos',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 30,
-                      fontWeight: FontWeight.bold,
-                      height: 1.1,
-                    ),
+                ),
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: IconButton(
+                    icon: const Icon(Icons.logout, color: Colors.white),
+                    onPressed: () => _handleLogout(context),
+                    tooltip: 'Cerrar Sesión',
                   ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Desarrolla tus habilidades',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),

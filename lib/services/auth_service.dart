@@ -263,4 +263,31 @@ Future<void> _saveUserToFirestore(User? user, {String? name}) async {
           )
         : null;
   }
+
+  /// Re-autentica al usuario (necesario para acciones sensibles como borrar cuenta)
+  Future<void> reauthenticate(String password) async {
+    final user = _firebaseAuth.currentUser;
+    if (user == null || user.email == null) throw Exception('Usuario no autenticado');
+
+    final credential = EmailAuthProvider.credential(
+      email: user.email!,
+      password: password,
+    );
+
+    await user.reauthenticateWithCredential(credential);
+  }
+
+  /// Elimina la cuenta del usuario de Firestore y Firebase Auth
+  Future<void> deleteAccount() async {
+    final user = _firebaseAuth.currentUser;
+    if (user == null) return;
+
+    final uid = user.uid;
+
+    // 1. Borrar de Firestore
+    await _firestore.collection('users').doc(uid).delete();
+
+    // 2. Borrar de Auth
+    await user.delete();
+  }
 }
