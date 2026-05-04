@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-import 'dart:convert';
 
 class MiembroModel {
   final String id;

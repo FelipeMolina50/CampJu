@@ -6,7 +6,6 @@ import '../../../models/user_model.dart';
 import '../../../services/auth_provider.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../core/widgets/custom_button.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CompleteProfileScreen extends StatefulWidget {
   const CompleteProfileScreen({super.key});
@@ -358,7 +357,7 @@ Future<void> _saveProfile() async {
 
                 // Municipio
                 DropdownButtonFormField<String>(
-                  value: _selectedMunicipio,
+                  initialValue: _selectedMunicipio,
                   decoration: const InputDecoration(
                     labelText: 'Municipio *',
                     border: OutlineInputBorder(),
@@ -405,7 +404,7 @@ Future<void> _saveProfile() async {
 
                 // Tipo de documento
                 DropdownButtonFormField<String>(
-                  value: _selectedTipoDocumento,
+                  initialValue: _selectedTipoDocumento,
                   decoration: const InputDecoration(
                     labelText: 'Tipo de documento *',
                     border: OutlineInputBorder(),
@@ -446,7 +445,7 @@ Future<void> _saveProfile() async {
 
                 // Sexo
                 DropdownButtonFormField<String>(
-                  value: _selectedSexo,
+                  initialValue: _selectedSexo,
                   decoration: const InputDecoration(
                     labelText: 'Sexo de nacimiento *',
                     border: OutlineInputBorder(),
@@ -526,7 +525,7 @@ Future<void> _saveProfile() async {
 
                 // Nivel/Rango en el programa
                 DropdownButtonFormField<String>(
-                  value: _selectedRango,
+                  initialValue: _selectedRango,
                   decoration: const InputDecoration(
                     labelText: 'Nivel en el programa *',
                     border: OutlineInputBorder(),

@@ -1,10 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../core/constants/app_constants.dart';
 import 'auth_service.dart';
+import 'package:flutter/foundation.dart';
 
 class AdminService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final AuthService _authService = AuthService();
   
   /// Promueve campista a admin (solo superAdmin)
   Future<bool> promoverAdmin(String candidateUid, String currentUserUid) async {
@@ -29,7 +29,7 @@ class AdminService {
       
       return true;
     } catch (e) {
-      print('Error promover admin: $e');
+      debugPrint('Error promover admin: $e');
       rethrow;
     }
   }
@@ -41,7 +41,7 @@ class AdminService {
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) => {
           'id': doc.id,
-          ...doc.data() as Map<String, dynamic>
+          ...doc.data()
         }).toList());
   }
 }

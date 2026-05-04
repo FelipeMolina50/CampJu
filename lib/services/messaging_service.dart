@@ -1,12 +1,11 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import '../core/routes/app_routes.dart';
-import 'package:flutter/material.dart' show NavigatorState, BuildContext;
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  print('Background message ${message.messageId}');
+  debugPrint('Background message ${message.messageId}');
 }
 
 class MessagingService {
@@ -24,7 +23,7 @@ class MessagingService {
       carPlay: true,
       criticalAlert: true,
     );
-    print('User granted permission: ${settings.authorizationStatus}');
+    debugPrint('User granted permission: ${settings.authorizationStatus}');
 
 
     // Init local notifications
@@ -32,12 +31,12 @@ class MessagingService {
 
     // Get FCM token
     String? token = await _messaging.getToken();
-    print('FCM Token: $token');
+    debugPrint('FCM Token: $token');
 
 
     // Handlers
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print('Foreground message: ${message.messageId}');
+      debugPrint('Foreground message: ${message.messageId}');
       MessagingService._showLocalNotification(message);
     });
     FirebaseMessaging.onMessageOpenedApp.listen(_onMessageOpenedApp);
@@ -60,13 +59,10 @@ class MessagingService {
     await _localNotifications.initialize(settings);
   }
 
-  static Future<void> _onForegroundMessage(RemoteMessage message) async {
-    print('Foreground message: ${message.messageId}');
-    await _showLocalNotification(message);
-  }
+
 
   static Future<void> _onMessageOpenedApp(RemoteMessage message) async {
-    print('Message opened app: ${message.messageId}');
+    debugPrint('Message opened app: ${message.messageId}');
     _handleMessageNavigation(message);
   }
 
@@ -96,7 +92,7 @@ class MessagingService {
     // Handle navigation based on data, e.g. navigate to bosque chat
     final route = message.data['route'] ?? '/';
     // Use navigatorKey or GlobalKey<NavigatorState> to navigate
-    print('Navigate to: \$route');
+    debugPrint('Navigate to: $route');
   }
 
   // Subscribe to topic e.g. for bosque events

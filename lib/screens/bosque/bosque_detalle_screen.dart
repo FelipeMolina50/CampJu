@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:campju/core/constants/app_colors.dart';
 import 'package:campju/core/constants/app_styles.dart';
 import 'package:campju/models/bosque_model.dart';
 

@@ -4,7 +4,6 @@ import 'package:campju/core/constants/app_styles.dart';
 import 'package:campju/core/widgets/custom_textfield.dart';
 import 'package:campju/core/widgets/custom_button.dart';
 import 'package:campju/models/bosque_model.dart';
-import 'package:campju/screens/bosque/bosque_detalle_screen.dart';
 
 class BosqueBuscarScreen extends StatefulWidget {
   const BosqueBuscarScreen({super.key});

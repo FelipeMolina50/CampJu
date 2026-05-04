@@ -1,5 +1,6 @@
 import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
+import 'package:flutter/foundation.dart';
 
 class EmailService {
   static const String smtpHost = 'smtp.gmail.com'; // Cambia si usas otro proveedor
@@ -29,9 +30,9 @@ class EmailService {
 
     try {
       final sendReport = await send(message, smtpServer);
-      print('Email enviado: $sendReport');
+      debugPrint('Email enviado: $sendReport');
     } catch (e) {
-      print('Error enviando email: $e');
+      debugPrint('Error enviando email: $e');
       rethrow;
     }
   }

@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-import 'dart:convert';
 
 enum UserRole { campista, coordinador, admin }
 

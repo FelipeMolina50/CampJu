@@ -214,7 +214,7 @@ Future<void> _saveUserToFirestore(User? user, {String? name}) async {
           return;
         } on FirebaseAuthException catch (e) {
           if (e.code == 'user-not-found' || e.code == 'invalid-email') {
-            throw e;
+            rethrow;
           }
           rethrow;
         }

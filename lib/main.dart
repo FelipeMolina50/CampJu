@@ -81,19 +81,23 @@ class MyApp extends StatelessWidget {
           ),
         },
         onGenerateRoute: (settings) {
+          final uri = Uri.parse(settings.name ?? '');
+
+          if (uri.pathSegments.length == 2 && uri.pathSegments.first == 'bosque') {
+            final id = uri.pathSegments.last;
+            return MaterialPageRoute(
+              builder: (context) => BosqueDetalleScreen(id: id),
+            );
+          }
+
+          if (uri.pathSegments.length == 2 && uri.pathSegments.first == 'curso') {
+            final id = uri.pathSegments.last;
+            return MaterialPageRoute(
+              builder: (context) => CursoDetalleScreen(id: id),
+            );
+          }
+
           switch (settings.name) {
-            case AppRoutes.bosqueDetalle:
-              final uri = Uri.parse(settings.name!);
-              final id = uri.pathSegments.last;
-              return MaterialPageRoute(
-                builder: (context) => BosqueDetalleScreen(id: id),
-              );
-            case AppRoutes.cursoDetalle:
-              final uri = Uri.parse(settings.name!);
-              final id = uri.pathSegments.last;
-              return MaterialPageRoute(
-                builder: (context) => CursoDetalleScreen(id: id),
-              );
             case AppRoutes.bosqueSolicitud:
               return MaterialPageRoute(
                 builder: (context) => const BosqueSolicitudScreen(),
@@ -102,8 +106,8 @@ class MyApp extends StatelessWidget {
             default:
               return MaterialPageRoute(
                 builder: (context) => Scaffold(
-                body: Center(child: Text('Route not found: ${settings.name}')),
-              ),
+                  body: Center(child: Text('Route not found: ${settings.name}')),
+                ),
               );
           }
         },

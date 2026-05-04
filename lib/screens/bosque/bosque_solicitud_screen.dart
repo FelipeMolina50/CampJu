@@ -3,7 +3,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_styles.dart';
 
 class BosqueSolicitudScreen extends StatefulWidget {
-  const BosqueSolicitudScreen({Key? key}) : super(key: key);
+  const BosqueSolicitudScreen({super.key});
 
   @override
   State<BosqueSolicitudScreen> createState() => _BosqueSolicitudScreenState();

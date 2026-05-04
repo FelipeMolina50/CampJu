@@ -1,7 +1,7 @@
   import 'package:flutter/material.dart';
 
 class BosquePerfilScreen extends StatefulWidget {
-  const BosquePerfilScreen({Key? key}) : super(key: key);
+  const BosquePerfilScreen({super.key});
 
   @override
   State<BosquePerfilScreen> createState() => _BosquePerfilScreenState();

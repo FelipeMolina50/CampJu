@@ -88,7 +88,7 @@ class AuthProvider extends ChangeNotifier {
         return userModel;
       }
     } catch (e) {
-      print('Error loading user data: $e');
+      debugPrint('Error loading user data: $e');
     }
     return null;
   }
@@ -104,15 +104,15 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     Future<Map<String, dynamic>> signInFlow() async {
-      print('Starting Google Sign In...');
+      debugPrint('Starting Google Sign In...');
       // Disconnect to force account selection
       await _googleSignIn
           .disconnect()
-          .catchError((e) => print('Disconnect error: $e'));
-      print('Disconnected from Google');
+          .catchError((e) { debugPrint('Disconnect error: $e'); return null; });
+      debugPrint('Disconnected from Google');
 
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      print('Google Sign In result: $googleUser');
+      debugPrint('Google Sign In result: $googleUser');
 
       if (googleUser == null) {
         _isLoading = false;
@@ -122,7 +122,7 @@ class AuthProvider extends ChangeNotifier {
 
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
-      print(
+      debugPrint(
           'Google Auth: ${googleAuth.idToken != null ? 'idToken present' : 'no idToken'}');
 
       if (googleAuth.idToken == null) {
@@ -134,9 +134,9 @@ class AuthProvider extends ChangeNotifier {
         idToken: googleAuth.idToken,
       );
 
-      print('Signing in with Firebase...');
+      debugPrint('Signing in with Firebase...');
       final result = await _authService.googleLogin(credential);
-      print('Firebase sign in result: $result');
+      debugPrint('Firebase sign in result: $result');
       if (result['success'] == true) {
         _user = result['user'] as UserModel?;
         _isLoading = false;
@@ -158,7 +158,7 @@ class AuthProvider extends ChangeNotifier {
       return await signInFlow().timeout(
         const Duration(seconds: 25),
         onTimeout: () {
-          print('Google Sign In timed out');
+          debugPrint('Google Sign In timed out');
           _errorMessage = 'Tiempo de espera agotado. Intenta de nuevo.';
           _isLoading = false;
           notifyListeners();
@@ -166,7 +166,7 @@ class AuthProvider extends ChangeNotifier {
         },
       );
     } catch (e) {
-      print('Google Sign In error: $e');
+      debugPrint('Google Sign In error: $e');
       _errorMessage = e.toString();
       _isLoading = false;
       notifyListeners();
