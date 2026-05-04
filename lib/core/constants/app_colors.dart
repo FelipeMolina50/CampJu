@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 class AppColors {
   // PRINCIPAL
-  static const Color primary = Color(0xFF10B981);
-  static const Color primaryDark = Color(0xFF059669); // Hover
+  static const Color primary = Color(0xFF00BFA6); // Emerald Green (used in Cursos)
+  static const Color primaryDark = Color(0xFF009C88); // Hover (Darker Emerald)
 
   // ACENTOS
   static const Color accentYellow = Color(0xFFFBBF24);

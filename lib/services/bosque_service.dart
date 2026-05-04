@@ -58,18 +58,18 @@ class BosqueService {
         }
       }
       
-      // Verificar 1 bosque máximo por admin
-      final QuerySnapshot existingBosques;
+      // Verificar 1 bosque máximo por coordinador
+      dynamic existingBosques;
       try {
         existingBosques = await _firestoreService.getCollectionDocuments(
           _bosqueCollection,
-          where: (ref) => ref.where('liderId', isEqualTo: userId),
+          where: (ref) => ref.where('liderId', isEqualTo: coordinadorId),
         );
       } catch (e) {
         throw Exception('No tienes permisos para leer los bosques. Revisa las Reglas de Firestore. Detalles: $e');
       }
       if (existingBosques.docs.isNotEmpty) {
-        throw Exception('Ya tienes un bosque. Un admin solo puede tener uno.');
+        throw Exception('Ese coordinador ya lidera un bosque. Un coordinador solo puede tener uno.');
       }
       
       // Crear con liderId desde constructor
