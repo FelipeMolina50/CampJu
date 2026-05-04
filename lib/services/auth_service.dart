@@ -122,15 +122,41 @@ class AuthService {
     if (user == null) return;
 
     try {
+      final now = DateTime.now();
       final userData = {
         'id': user.uid,
         'email': user.email,
+        'emailVerified': user.emailVerified,
         'name': name ?? user.displayName ?? '',
-        'photoUrl': user.photoURL,
-        'role': 0,
+        'apellidos': '', // Campo vacío hasta que el usuario lo complete
+        'municipio': '', // Campo vacío hasta que el usuario lo complete
+        'fechaNacimiento': now.toIso8601String(), // Valor temporal
+        'tipoDocumento': 'CC',
+        'numeroDocumento': '',
+        'sexo': 'Masculino',
+        'telefono': '',
+        'eps': '',
+        'fechaIngresoPrograma': null,
+        'rango': 'aspirante',
+        'esArbolMayor': false,
         'bosqueId': null,
-        'createdAt': Timestamp.now(),
-        'updatedAt': Timestamp.now(),
+        'fechaIngresoBosque': null,
+        'perfilCompleto': false, // Usuario debe completar el perfil
+        'nombreAcudiente': null,
+        'telefonoAcudiente': null,
+        'photoUrl': user.photoURL,
+        'role': 0, // campista
+        'genero': null,
+        'orientacionSexual': null,
+        'discapacidad': null,
+        'grupoPoblacional': null,
+        'esVictimaConflicto': false,
+        'zonaDondeVive': null,
+        'nivelEducativo': null,
+        'ocupacion': null,
+        'numeroResolucion': null,
+        'createdAt': now.toIso8601String(),
+        'updatedAt': now.toIso8601String(),
       };
 
       await _firestore.collection('users').doc(user.uid).set(
@@ -215,7 +241,16 @@ class AuthService {
         ? UserModel(
             id: user.uid,
             email: user.email ?? '',
+            emailVerified: user.emailVerified,
             name: user.displayName ?? '',
+            apellidos: '', // Valor por defecto
+            municipio: '', // Valor por defecto
+            fechaNacimiento: DateTime.now(), // Valor por defecto
+            tipoDocumento: 'CC', // Valor por defecto
+            numeroDocumento: '', // Valor por defecto
+            sexo: 'Masculino', // Valor por defecto
+            telefono: '', // Valor por defecto
+            eps: '', // Valor por defecto
             photoUrl: user.photoURL,
             role: UserRole.campista,
             createdAt: user.metadata.creationTime ?? DateTime.now(),

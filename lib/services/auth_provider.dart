@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import 'auth_service.dart';
 
@@ -28,22 +29,55 @@ class AuthProvider extends ChangeNotifier {
 
   void _initAuthListener() {
     _authSubscription =
-        FirebaseAuth.instance.authStateChanges().listen((User? firebaseUser) {
+        FirebaseAuth.instance.authStateChanges().listen((User? firebaseUser) async {
       if (firebaseUser != null) {
-        _user = UserModel(
-          id: firebaseUser.uid,
-          email: firebaseUser.email ?? '',
-          name: firebaseUser.displayName ?? '',
-          photoUrl: firebaseUser.photoURL,
-          role: UserRole.campista,
-          createdAt: firebaseUser.metadata.creationTime ?? DateTime.now(),
-          updatedAt: firebaseUser.metadata.lastSignInTime ?? DateTime.now(),
-        );
+        // Cargar datos completos del usuario desde Firestore
+        final userData = await _loadUserData(firebaseUser.uid);
+        if (userData != null) {
+          _user = userData;
+        } else {
+          // Usuario básico si no hay datos en Firestore
+          _user = UserModel(
+            id: firebaseUser.uid,
+            email: firebaseUser.email ?? '',
+            emailVerified: firebaseUser.emailVerified,
+            name: firebaseUser.displayName ?? '',
+            apellidos: '', // Valor por defecto
+            municipio: '', // Valor por defecto
+            fechaNacimiento: DateTime.now(), // Valor por defecto
+            tipoDocumento: 'CC', // Valor por defecto
+            numeroDocumento: '', // Valor por defecto
+            sexo: 'Masculino', // Valor por defecto
+            telefono: '', // Valor por defecto
+            eps: '', // Valor por defecto
+            photoUrl: firebaseUser.photoURL,
+            role: UserRole.campista,
+            createdAt: firebaseUser.metadata.creationTime ?? DateTime.now(),
+            updatedAt: firebaseUser.metadata.lastSignInTime ?? DateTime.now(),
+          );
+        }
       } else {
         _user = null;
       }
       notifyListeners();
     });
+  }
+
+  Future<UserModel?> _loadUserData(String uid) async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      if (doc.exists) {
+        return UserModel.fromJson(doc.data()!);
+      }
+    } catch (e) {
+      print('Error loading user data: $e');
+    }
+    return null;
+  }
+
+  void setUser(UserModel user) {
+    _user = user;
+    notifyListeners();
   }
 
   Future<Map<String, dynamic>> googleSignIn() async {
@@ -226,6 +260,26 @@ class AuthProvider extends ChangeNotifier {
   Future<void> logout() async {
     await _googleSignIn.signOut();
     await _authService.logout();
+  }
+
+  // Método para determinar la ruta inicial basada en el estado del usuario
+  String getInitialRoute() {
+    if (_user == null) {
+      return '/login';
+    }
+
+    // 1. Si email no está verificado → ir a verificar correo
+    if (!_user!.emailVerified) {
+      return '/verificar-correo';
+    }
+
+    // 2. Si perfil no está completo → ir a completar perfil
+    if (!_user!.perfilCompleto) {
+      return '/complete-profile';
+    }
+
+    // 3. Si todo ok → ir al home
+    return '/home';
   }
 
   @override

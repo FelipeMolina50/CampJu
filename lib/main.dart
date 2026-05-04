@@ -14,6 +14,8 @@ import 'screens/perfil/editar_perfil_screen.dart';
 import 'screens/auth/forgot_password_screen.dart';
 import 'screens/auth/terms_conditions_screen.dart';
 import 'screens/auth/verificar_correo_screen.dart';
+import 'screens/auth/complete_profile_screen.dart';
+import 'screens/auth/auth_wrapper.dart';
 import 'screens/bosque/bosque_detalle_screen.dart';
 import 'screens/cursos/curso_detalle_screen.dart';
 import 'services/messaging_service.dart';
@@ -43,11 +45,13 @@ class MyApp extends StatelessWidget {
           primarySwatch: Colors.green,
           useMaterial3: true,
         ),
-        initialRoute: AppRoutes.login,
+        initialRoute: '/',
         routes: {
+          '/': (context) => const AuthWrapper(),
           AppRoutes.login: (context) => const LoginScreen(),
           AppRoutes.register: (context) => const RegisterScreen(),
           AppRoutes.verificarCorreo: (context) => const VerificarCorreoScreen(),
+          AppRoutes.completeProfile: (context) => const CompleteProfileScreen(),
           AppRoutes.forgotPassword: (context) => const ForgotPasswordScreen(),
           AppRoutes.terms: (context) => const TermsConditionsScreen(),
           AppRoutes.home: (context) => Consumer<AuthProvider>(

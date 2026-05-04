@@ -4,6 +4,7 @@ class AppRoutes {
   static const String register = '/register';
   static const String verificarCorreo = '/verificar-correo';
   static const String terms = '/terms';
+  static const String completeProfile = '/complete-profile';
   static const String home = '/home';
   
   // Main tabs
