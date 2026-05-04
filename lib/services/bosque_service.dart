@@ -2,6 +2,9 @@ import '../models/bosque_model.dart';
 import '../models/miembro_model.dart';
 import '../models/solicitud_model.dart';
 import 'firestore_service.dart';
+import '../core/constants/app_constants.dart';
+
+import 'package:uuid/uuid.dart';
 
 class BosqueService {
   final FirestoreService _firestoreService = FirestoreService();
@@ -33,20 +36,38 @@ class BosqueService {
     }
   }
 
-  Future<void> crearBosque(BosqueModel bosque, String userId) async {
+  Future<void> crearBosque(BosqueModel bosque, String userId, String coordinadorId, String coordinadorNombre) async {
     try {
       // Validar admin
       final userDoc = await _firestoreService.getDocument('users', userId);
       final userData = userDoc.data() as Map<String, dynamic>?;
-      if (userData == null || (userData['role'] ?? 0) != 2) {
+      
+      bool isSuperAdmin = userData != null && userData['email'] == AppConstants.superAdminEmail;
+      bool isAdminRole = userData != null && (userData['role'] ?? 0) == 2;
+      
+      if (!isSuperAdmin && !isAdminRole) {
         throw Exception('Solo administradores pueden crear bosques');
       }
       
+      // Auto-update role in DB if it's the super admin but role is wrong
+      if (isSuperAdmin && !isAdminRole) {
+        try {
+          await _firestoreService.updateDocument('users', userId, {'role': 2});
+        } catch (e) {
+          throw Exception('No tienes permisos en Firestore para actualizar tu rol. Revisa las Reglas de Firestore (Console). Detalles: $e');
+        }
+      }
+      
       // Verificar 1 bosque máximo por admin
-      final existingBosques = await _firestoreService.getCollectionDocuments(
-        _bosqueCollection,
-        where: (ref) => ref.where('liderId', isEqualTo: userId),
-      );
+      final QuerySnapshot existingBosques;
+      try {
+        existingBosques = await _firestoreService.getCollectionDocuments(
+          _bosqueCollection,
+          where: (ref) => ref.where('liderId', isEqualTo: userId),
+        );
+      } catch (e) {
+        throw Exception('No tienes permisos para leer los bosques. Revisa las Reglas de Firestore. Detalles: $e');
+      }
       if (existingBosques.docs.isNotEmpty) {
         throw Exception('Ya tienes un bosque. Un admin solo puede tener uno.');
       }
@@ -57,34 +78,35 @@ class BosqueService {
         nombre: bosque.nombre,
         descripcion: bosque.descripcion,
         zona: bosque.zona,
-        liderId: userId,
+        liderId: coordinadorId,
         fotoUrl: bosque.fotoUrl,
         miembros: 1, // Empieza con 1 miembro
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
       
-      await _firestoreService.setDocument(
-        _bosqueCollection,
-        bosque.id,
-        bosqueConLider.toJson(),
-      );
+      // Crear bosque
+      try {
+        await _firestoreService.setDocument(_bosqueCollection, bosque.id, bosqueConLider.toFirestore());
+      } catch (e) {
+        throw Exception('No tienes permisos para crear el bosque. Revisa las reglas de la colección "bosques" en Firebase. Detalles: $e');
+      }
       
-      // Auto-agregar como primer miembro/coordinador
       final miembro = MiembroModel(
-        id: '${userId}_${bosque.id}',
+        id: Uuid().v4(),
         bosqueId: bosque.id,
-        usuarioId: userId,
-        nombre: userData['name'] ?? 'Admin',
+        usuarioId: coordinadorId,
+        nombre: coordinadorNombre,
         rol: 'coordinador',
         fechaIngreso: DateTime.now(),
         updatedAt: DateTime.now(),
       );
-      await _firestoreService.setDocument(
-        _miembroCollection,
-        miembro.id,
-        miembro.toJson(),
-      );
+      
+      try {
+        await _firestoreService.setDocument(_miembroCollection, miembro.id, miembro.toJson());
+      } catch (e) {
+        throw Exception('Bosque creado, pero falló al añadirte como miembro por permisos. Detalles: $e');
+      }
     } catch (e) {
       rethrow;
     }

@@ -10,6 +10,9 @@ class AppColors {
   static const Color accentPink = Color(0xFFF472B6);
   static const Color accentPurple = Color(0xFFA78BFA);
   static const Color accentBlue = Color(0xFF60A5FA);
+  
+  // CURSOS
+  static const Color coursePrimary = Color(0xFF00BFA6);
 
   // MENSAJES (Chat)
   static const Color msgSent = Color(0xFF1D9E75);

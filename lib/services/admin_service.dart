@@ -44,4 +44,20 @@ class AdminService {
           ...doc.data()
         }).toList());
   }
+
+  /// Obtiene todos los usuarios una vez (útil para dropdowns)
+  Future<List<Map<String, dynamic>>> obtenerTodosLosUsuarios() async {
+    try {
+      final snapshot = await _firestore.collection('users')
+          .orderBy('name', descending: false)
+          .get();
+      return snapshot.docs.map((doc) => {
+        'id': doc.id,
+        ...doc.data()
+      }).toList();
+    } catch (e) {
+      debugPrint('Error obtenerTodosLosUsuarios: $e');
+      return [];
+    }
+  }
 }

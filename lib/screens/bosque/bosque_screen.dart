@@ -10,6 +10,7 @@ import '../../../core/widgets/custom_textfield.dart';
 import '../../../models/bosque_model.dart';
 import '../../../services/auth_provider.dart';
 import '../../../services/bosque_service.dart';
+import '../../../services/admin_service.dart';
 import 'bosque_buscar_screen.dart';
 import 'bosque_detalle_screen.dart';
 
@@ -64,68 +65,114 @@ class _BosqueScreenState extends State<BosqueScreen> {
     final nombreController = TextEditingController();
     final descripcionController = TextEditingController();
     final zonaController = TextEditingController();
+    String? coordinadorSeleccionadoId;
+    String? coordinadorSeleccionadoNombre;
+    
+    final adminService = AdminService();
 
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (innerContext, setDialogState) => AlertDialog(
           title: const Text('Crear Bosque'),
           content: SizedBox(
             width: double.maxFinite,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CustomTextField(
-                  label: 'Nombre del Bosque *',
-                  controller: nombreController,
-                ),
-                const SizedBox(height: 16),
-                CustomTextField(
-                  label: 'Descripción',
-                  controller: descripcionController,
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 16),
-                CustomTextField(
-                  label: 'Zona *',
-                  controller: zonaController,
-                ),
-              ],
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CustomTextField(
+                    label: 'Nombre del Bosque *',
+                    controller: nombreController,
+                  ),
+                  const SizedBox(height: 16),
+                  CustomTextField(
+                    label: 'Descripción',
+                    controller: descripcionController,
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 16),
+                  CustomTextField(
+                    label: 'Zona *',
+                    controller: zonaController,
+                  ),
+                  const SizedBox(height: 16),
+                  FutureBuilder<List<Map<String, dynamic>>>(
+                    future: adminService.obtenerTodosLosUsuarios(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (snapshot.hasError || !snapshot.hasData) {
+                        return const Text('Error cargando usuarios');
+                      }
+                      
+                      final usuarios = snapshot.data!;
+                      
+                      return DropdownButtonFormField<String>(
+                        decoration: InputDecoration(
+                          labelText: 'Seleccionar Coordinador *',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        value: coordinadorSeleccionadoId,
+                        items: usuarios.map((u) {
+                          return DropdownMenuItem<String>(
+                            value: u['id'],
+                            child: Text(u['name'] ?? 'Usuario'),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          setDialogState(() {
+                            coordinadorSeleccionadoId = val;
+                            coordinadorSeleccionadoNombre = usuarios.firstWhere((u) => u['id'] == val)['name'] ?? 'Coordinador';
+                          });
+                        },
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Cancelar'),
             ),
             Consumer<AuthProvider>(
-              builder: (context, authProvider, child) {
+              builder: (consumerContext, authProvider, child) {
                 return CustomButton(
                   label: 'Crear Bosque',
-                  onPressed: authProvider.user?.role.index == 2
+                  onPressed: _isAdmin && coordinadorSeleccionadoId != null
                       ? () async {
-                          Navigator.pop(context);
+                          // Capturar variables antes del pop
+                          final user = authProvider.user!;
+                          final scaffoldMessenger = ScaffoldMessenger.of(context);
+                          
+                          Navigator.pop(dialogContext);
                           setState(() => _isCreating = true);
 
                           try {
-                            // ✅ Guardamos context antes del gap async
-                            final authProv = Provider.of<AuthProvider>(context, listen: false);
-                            final user = authProv.user!;
-                            final scaffoldMessenger = ScaffoldMessenger.of(context);
-
                             final bosque = BosqueModel(
                               id: const Uuid().v4(),
                               nombre: nombreController.text.trim(),
                               descripcion: descripcionController.text.trim(),
                               zona: zonaController.text.trim(),
-                              liderId: user.id,
+                              liderId: coordinadorSeleccionadoId!,
                               fotoUrl: null,
                               miembros: 1,
                               createdAt: DateTime.now(),
                               updatedAt: DateTime.now(),
                             );
 
-                            await _bosqueService.crearBosque(bosque, user.id);
+                            await _bosqueService.crearBosque(
+                                bosque, 
+                                user.id,
+                                coordinadorSeleccionadoId!,
+                                coordinadorSeleccionadoNombre!
+                            );
 
                             if (mounted) {
                               scaffoldMessenger.showSnackBar(
@@ -135,7 +182,7 @@ class _BosqueScreenState extends State<BosqueScreen> {
                             }
                           } catch (e) {
                             if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              scaffoldMessenger.showSnackBar(
                                 SnackBar(content: Text('Error: $e')),
                               );
                             }
