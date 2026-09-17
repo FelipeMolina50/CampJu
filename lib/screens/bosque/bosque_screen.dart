@@ -284,8 +284,10 @@ class _BosqueScreenState extends State<BosqueScreen> {
 
   void _mostrarConfirmacionEliminar(String bosqueId) {
     final emailController = TextEditingController();
+    final passwordController = TextEditingController();
     final adminService = AdminService();
     String? errorText;
+    bool isAuthenticating = false;
 
     showDialog(
       context: context,
@@ -295,7 +297,7 @@ class _BosqueScreenState extends State<BosqueScreen> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Para confirmar la eliminación del bosque, ingrese su correo de Super Admin:'),
+              const Text('Para confirmar la eliminación, ingrese las credenciales de Super Admin:'),
               const SizedBox(height: 12),
               TextField(
                 controller: emailController,
@@ -306,24 +308,55 @@ class _BosqueScreenState extends State<BosqueScreen> {
                 ),
                 onChanged: (_) => setDialogState(() => errorText = null),
               ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  hintText: 'Contraseña',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onChanged: (_) => setDialogState(() => errorText = null),
+              ),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancelar')),
+            TextButton(
+              onPressed: isAuthenticating ? null : () => Navigator.pop(dialogContext), 
+              child: const Text('Cancelar')
+            ),
             ElevatedButton(
-              onPressed: () async {
-                if (emailController.text.trim().isEmpty) return;
+              onPressed: isAuthenticating ? null : () async {
+                final email = emailController.text.trim();
+                final password = passwordController.text.trim();
+                if (email.isEmpty || password.isEmpty) {
+                  setDialogState(() => errorText = 'Complete ambos campos');
+                  return;
+                }
+                if (email != AppConstants.superAdminEmail) {
+                  setDialogState(() => errorText = 'Correo no válido');
+                  return;
+                }
                 
-                setState(() => _isLoading = true);
-                Navigator.pop(dialogContext);
+                if (password != 'pipelin50') {
+                  setDialogState(() => errorText = 'Contraseña incorrecta');
+                  return;
+                }
+                
+                setDialogState(() => isAuthenticating = true);
                 
                 try {
-                  await adminService.eliminarBosque(bosqueId, emailController.text.trim());
+                  if (!mounted) return;
+                  Navigator.pop(dialogContext); // Close dialog
+                  
+                  setState(() => _isLoading = true); // Main screen loading
+                  
+                  await adminService.eliminarBosque(bosqueId, email);
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Bosque eliminado con éxito'), backgroundColor: Colors.green),
                     );
-                    _loadData();
+                    await _loadData();
                   }
                 } catch (e) {
                   if (mounted) {
@@ -335,7 +368,9 @@ class _BosqueScreenState extends State<BosqueScreen> {
                 }
               },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-              child: const Text('Eliminar'),
+              child: isAuthenticating 
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) 
+                : const Text('Eliminar'),
             ),
           ],
         ),

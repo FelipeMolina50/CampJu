@@ -1,6 +1,7 @@
 import '../models/bosque_model.dart';
 import '../models/miembro_model.dart';
 import '../models/solicitud_model.dart';
+import '../models/mensaje_model.dart';
 import 'firestore_service.dart';
 import '../core/constants/app_constants.dart';
 
@@ -363,6 +364,32 @@ class BosqueService {
           'updatedAt': DateTime.now().toIso8601String(),
         });
       }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // --- MÉTODOS DEL CHAT ---
+  
+  Stream<List<MensajeModel>> getMensajesStream(String bosqueId) {
+    return _firestoreService.firestore
+        .collection(_bosqueCollection)
+        .doc(bosqueId)
+        .collection('mensajes')
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => MensajeModel.fromFirestore(doc))
+            .toList());
+  }
+
+  Future<void> enviarMensaje(String bosqueId, MensajeModel mensaje) async {
+    try {
+      await _firestoreService.firestore
+          .collection(_bosqueCollection)
+          .doc(bosqueId)
+          .collection('mensajes')
+          .add(mensaje.toFirestore());
     } catch (e) {
       rethrow;
     }
