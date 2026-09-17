@@ -38,7 +38,7 @@ void main() async {
   // 2. Supabase (Solo para Storage: imágenes y archivos)
   await Supabase.initialize(
     url: 'https://uokhyfggtamxjiwywkpe.supabase.co',
-    anonKey: 'TU_ANON_KEY_COMPLETA_AQUI', // ⚠️ Pega aquí tu anon key completa de Supabase
+    anonKey: 'sb_secret_JZVYdNQljmRH4rkz4YVdYA_xsd-NELE',
   );
 
   await MessagingService.initialize();

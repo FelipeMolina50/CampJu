@@ -15,7 +15,10 @@ import '../../../services/auth_provider.dart';
 import '../../../services/bosque_service.dart';
 import '../../../services/admin_service.dart';
 import '../../../services/firestore_service.dart';
+import '../../../services/supabase_storage_service.dart';
 import '../../../models/mensaje_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class BosqueScreen extends StatefulWidget {
   const BosqueScreen({super.key});
@@ -661,9 +664,14 @@ class _BosqueScreenState extends State<BosqueScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                     child: Row(
                       children: [
-                        const CircleAvatar(
+                        CircleAvatar(
                           backgroundColor: Colors.white24,
-                          child: Icon(Icons.forest, color: Colors.white),
+                          backgroundImage: (_miBosqueActual?.fotoUrl != null && _miBosqueActual!.fotoUrl!.isNotEmpty)
+                              ? NetworkImage(_miBosqueActual!.fotoUrl!)
+                              : null,
+                          child: (_miBosqueActual?.fotoUrl == null || _miBosqueActual!.fotoUrl!.isEmpty)
+                              ? const Icon(Icons.forest, color: Colors.white)
+                              : null,
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -711,17 +719,20 @@ class _BosqueScreenState extends State<BosqueScreen> {
                     children: [
                       CircleAvatar(
                         radius: 50,
-                        backgroundColor: AppColors.primary.withOpacity(0.1),
-                        child: const Icon(Icons.forest, size: 50, color: AppColors.primary),
+                        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                        backgroundImage: (_miBosqueActual?.fotoUrl != null && _miBosqueActual!.fotoUrl!.isNotEmpty)
+                            ? NetworkImage(_miBosqueActual!.fotoUrl!)
+                            : null,
+                        child: (_miBosqueActual?.fotoUrl == null || _miBosqueActual!.fotoUrl!.isEmpty)
+                            ? const Icon(Icons.forest, size: 50, color: AppColors.primary)
+                            : null,
                       ),
                       if (_isCoordinador)
                         Positioned(
                           bottom: 0,
                           right: 0,
                           child: InkWell(
-                            onTap: () {
-                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('La carga de imágenes (Supabase) está pendiente de configuración.')));
-                            },
+                            onTap: () => _cambiarFotoBosque(context),
                             child: const CircleAvatar(
                               radius: 16,
                               backgroundColor: AppColors.accentYellow,
@@ -837,6 +848,65 @@ class _BosqueScreenState extends State<BosqueScreen> {
   }
 
   final _chatController = TextEditingController();
+  bool _isSendingMedia = false;
+
+  // ─── Foto de perfil del bosque ───
+  Future<void> _cambiarFotoBosque(BuildContext ctx) async {
+    if (_miBosqueActual == null) return;
+    try {
+      final url = await SupabaseStorageService.subirFotoBosque(_miBosqueActual!.id);
+      if (url == null) return;
+      // Guardar en Firestore
+      await FirebaseFirestore.instance
+          .collection('bosques')
+          .doc(_miBosqueActual!.id)
+          .update({'fotoUrl': url});
+      // Refrescar datos locales
+      await _loadData();
+      if (mounted) Navigator.pop(ctx); // Cerrar el perfil
+      if (mounted) _mostrarPerfilBosque();  // Volver a abrir con la nueva foto
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al subir foto: $e'), backgroundColor: Colors.red));
+    }
+  }
+
+  // ─── Imagen en el chat ───
+  Future<void> _adjuntarImagen() async {
+    if (_miBosqueActual == null) return;
+    setState(() => _isSendingMedia = true);
+    try {
+      final url = await SupabaseStorageService.subirImagenChat(_miBosqueActual!.id);
+      if (url == null) { setState(() => _isSendingMedia = false); return; }
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final user = authProvider.user;
+      if (user == null) return;
+      final msg = MensajeModel(id: '', senderId: user.id, senderName: user.name, message: '📷 Imagen', timestamp: DateTime.now(), tipo: 'imagen', imageUrl: url);
+      await _bosqueService.enviarMensaje(_miBosqueActual!.id, msg);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+    } finally {
+      if (mounted) setState(() => _isSendingMedia = false);
+    }
+  }
+
+  // ─── Archivo en el chat ───
+  Future<void> _adjuntarArchivo() async {
+    if (_miBosqueActual == null) return;
+    setState(() => _isSendingMedia = true);
+    try {
+      final result = await SupabaseStorageService.subirArchivoChat(_miBosqueActual!.id);
+      if (result == null) { setState(() => _isSendingMedia = false); return; }
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final user = authProvider.user;
+      if (user == null) return;
+      final msg = MensajeModel(id: '', senderId: user.id, senderName: user.name, message: '📎 ${result.nombre}', timestamp: DateTime.now(), tipo: 'archivo', imageUrl: result.url, fileName: result.nombre);
+      await _bosqueService.enviarMensaje(_miBosqueActual!.id, msg);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+    } finally {
+      if (mounted) setState(() => _isSendingMedia = false);
+    }
+  }
 
   Widget _buildForestChat() {
     return Column(
@@ -881,27 +951,130 @@ class _BosqueScreenState extends State<BosqueScreen> {
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: 8, top: 4),
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.78),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: isMe ? AppColors.primary : Colors.white,
           borderRadius: BorderRadius.circular(16).copyWith(
             bottomRight: isMe ? const Radius.circular(0) : const Radius.circular(16),
             bottomLeft: !isMe ? const Radius.circular(0) : const Radius.circular(16),
           ),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))],
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 2))],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (!isMe)
-              Text(msg.senderName, style: const TextStyle(color: AppColors.primaryDark, fontSize: 12, fontWeight: FontWeight.bold)),
-            if (!isMe) const SizedBox(height: 2),
-            Text(msg.message, style: TextStyle(color: isMe ? Colors.white : AppColors.textPrimary, fontSize: 15)),
-            const SizedBox(height: 4),
-            Text(
-              '${msg.timestamp.hour.toString().padLeft(2, '0')}:${msg.timestamp.minute.toString().padLeft(2, '0')}',
-              style: TextStyle(color: isMe ? Colors.white70 : Colors.grey, fontSize: 10),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(msg.senderName, style: const TextStyle(color: AppColors.primaryDark, fontSize: 12, fontWeight: FontWeight.bold)),
+              ),
+            if (msg.tipo == 'imagen' && msg.imageUrl != null) ...[
+              GestureDetector(
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => Dialog(
+                      backgroundColor: Colors.transparent,
+                      insetPadding: const EdgeInsets.all(8),
+                      child: Stack(
+                        alignment: Alignment.topRight,
+                        children: [
+                          InteractiveViewer(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.network(msg.imageUrl!, fit: BoxFit.contain),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    msg.imageUrl!,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, progress) {
+                      if (progress == null) return child;
+                      return Container(
+                        height: 180,
+                        alignment: Alignment.center,
+                        child: const CircularProgressIndicator(strokeWidth: 2),
+                      );
+                    },
+                    errorBuilder: (_, __, ___) => const Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: Icon(Icons.broken_image, color: Colors.grey, size: 40),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+            ] else if (msg.tipo == 'archivo' && msg.imageUrl != null) ...[
+              InkWell(
+                onTap: () async {
+                  final uri = Uri.tryParse(msg.imageUrl!);
+                  if (uri != null && await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: isMe ? Colors.white.withValues(alpha: 0.15) : AppColors.background,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.insert_drive_file, color: isMe ? Colors.white : AppColors.primary, size: 30),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              msg.fileName ?? 'Archivo adjunto',
+                              style: TextStyle(
+                                color: isMe ? Colors.white : AppColors.textPrimary,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              'Toca para abrir',
+                              style: TextStyle(color: isMe ? Colors.white70 : Colors.grey, fontSize: 10),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.download, color: isMe ? Colors.white70 : Colors.grey, size: 20),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+            ] else ...[
+              Text(
+                msg.message,
+                style: TextStyle(color: isMe ? Colors.white : AppColors.textPrimary, fontSize: 15),
+              ),
+              const SizedBox(height: 4),
+            ],
+            Align(
+              alignment: Alignment.bottomRight,
+              child: Text(
+                '${msg.timestamp.hour.toString().padLeft(2, '0')}:${msg.timestamp.minute.toString().padLeft(2, '0')}',
+                style: TextStyle(color: isMe ? Colors.white70 : Colors.grey, fontSize: 10),
+              ),
             ),
           ],
         ),
@@ -910,49 +1083,68 @@ class _BosqueScreenState extends State<BosqueScreen> {
   }
 
   Widget _buildChatInput() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -2))],
-      ),
-      child: SafeArea(
-        child: Row(
-          children: [
-            IconButton(
-              icon: const Icon(Icons.attach_file, color: Colors.grey),
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Envío de archivos (Supabase) pendiente de configuración')));
-              },
-            ),
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: AppColors.background,
-                  borderRadius: BorderRadius.circular(24),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (_isSendingMedia)
+          LinearProgressIndicator(color: AppColors.primary, backgroundColor: AppColors.primary.withValues(alpha: 0.1)),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -2))],
+          ),
+          child: SafeArea(
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.attach_file, color: Colors.grey),
+                  onPressed: _isSendingMedia ? null : () {
+                    showModalBottomSheet(
+                      context: context,
+                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+                      builder: (_) => SafeArea(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ListTile(leading: const Icon(Icons.image, color: AppColors.primary), title: const Text('Enviar imagen'), onTap: () { Navigator.pop(context); _adjuntarImagen(); }),
+                            ListTile(leading: const Icon(Icons.insert_drive_file, color: AppColors.primary), title: const Text('Enviar archivo'), onTap: () { Navigator.pop(context); _adjuntarArchivo(); }),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
-                child: TextField(
-                  controller: _chatController,
-                  decoration: const InputDecoration(
-                    hintText: 'Escribe un mensaje...',
-                    border: InputBorder.none,
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: TextField(
+                      controller: _chatController,
+                      decoration: const InputDecoration(
+                        hintText: 'Escribe un mensaje...',
+                        border: InputBorder.none,
+                      ),
+                      maxLines: null,
+                    ),
                   ),
-                  maxLines: null,
                 ),
-              ),
+                const SizedBox(width: 8),
+                CircleAvatar(
+                  backgroundColor: AppColors.primary,
+                  child: IconButton(
+                    icon: const Icon(Icons.send, color: Colors.white, size: 20),
+                    onPressed: _isSendingMedia ? null : _enviarMensajeChat,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 8),
-            CircleAvatar(
-              backgroundColor: AppColors.primary,
-              child: IconButton(
-                icon: const Icon(Icons.send, color: Colors.white, size: 20),
-                onPressed: _enviarMensajeChat,
-              ),
-            ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 

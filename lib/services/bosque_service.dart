@@ -370,9 +370,9 @@ class BosqueService {
   }
 
   // --- MÉTODOS DEL CHAT ---
-  
+
   Stream<List<MensajeModel>> getMensajesStream(String bosqueId) {
-    return _firestoreService.firestore
+    return FirebaseFirestore.instance
         .collection(_bosqueCollection)
         .doc(bosqueId)
         .collection('mensajes')
@@ -385,7 +385,7 @@ class BosqueService {
 
   Future<void> enviarMensaje(String bosqueId, MensajeModel mensaje) async {
     try {
-      await _firestoreService.firestore
+      await FirebaseFirestore.instance
           .collection(_bosqueCollection)
           .doc(bosqueId)
           .collection('mensajes')
