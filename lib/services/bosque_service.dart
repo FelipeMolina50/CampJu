@@ -4,7 +4,7 @@ import '../models/solicitud_model.dart';
 import '../models/mensaje_model.dart';
 import 'firestore_service.dart';
 import '../core/constants/app_constants.dart';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter/foundation.dart';
 

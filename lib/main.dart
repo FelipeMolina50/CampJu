@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'services/auth_provider.dart';
@@ -28,9 +29,18 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 1. Firebase (Autenticación + Firestore)
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // 2. Supabase (Solo para Storage: imágenes y archivos)
+  await Supabase.initialize(
+    url: 'https://uokhyfggtamxjiwywkpe.supabase.co',
+    anonKey: 'TU_ANON_KEY_COMPLETA_AQUI', // ⚠️ Pega aquí tu anon key completa de Supabase
+  );
+
   await MessagingService.initialize();
   runApp(const MyApp());
 }
