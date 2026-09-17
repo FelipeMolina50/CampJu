@@ -153,7 +153,9 @@ class SupabaseStorageService {
     required String url,
     String? nombre,
   }) async {
-    final uri = Uri.tryParse(url);
+    // Añadir parámetro para forzar descarga en Supabase
+    final String finalUrl = url.contains('?') ? '$url&download=' : '$url?download=';
+    final uri = Uri.tryParse(finalUrl);
     if (uri == null) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -283,6 +285,26 @@ class SupabaseStorageService {
         ),
       ),
     );
+  }
+
+
+  // ──────────────────────────────────────────
+  // MEDIA DE PUBLICACIONES DEL FEED
+  // ──────────────────────────────────────────
+  static Future<String?> subirMediaPublicacion(String bosqueId, File file) async {
+    await _ensureBucket(_bucketBosques); // Reutilizamos el bucket de bosques
+
+    final ext = p.extension(file.path);
+    final nombre = '${DateTime.now().millisecondsSinceEpoch}$ext';
+    final path = 'bosques/$bosqueId/publicaciones/$nombre';
+
+    try {
+      await _supabase.storage.from(_bucketBosques).upload(path, file);
+      return _supabase.storage.from(_bucketBosques).getPublicUrl(path);
+    } catch (e) {
+      debugPrint('Error subiendo media de publicación: $e');
+      return null;
+    }
   }
 }
 

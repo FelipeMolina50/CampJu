@@ -25,6 +25,7 @@ import 'screens/perfil/configuracion_screen.dart';
 import 'screens/perfil/notificaciones_screen.dart';
 import 'screens/perfil/privacidad_seguridad_screen.dart';
 import 'screens/perfil/ayuda_soporte_screen.dart';
+import 'screens/home/placeholder_screen.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 void main() async {
@@ -109,6 +110,8 @@ class MyApp extends StatelessWidget {
           AppRoutes.notificaciones: (context) => const NotificacionesScreen(),
           AppRoutes.privacidad: (context) => const PrivacidadSeguridadScreen(),
           AppRoutes.ayuda: (context) => const AyudaSoporteScreen(),
+          AppRoutes.cronograma: (context) => const PlaceholderScreen(title: 'Cronograma'),
+          AppRoutes.calendario: (context) => const PlaceholderScreen(title: 'Calendario'),
         },
         onGenerateRoute: (settings) {
           final uri = Uri.parse(settings.name ?? '');

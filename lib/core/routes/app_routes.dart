@@ -28,4 +28,8 @@ class AppRoutes {
   static const String notificaciones = '/notificaciones';
   static const String privacidad = '/privacidad';
   static const String ayuda = '/ayuda';
+  
+  // Header Modules
+  static const String cronograma = '/cronograma';
+  static const String calendario = '/calendario';
 }
