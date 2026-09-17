@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/routes/app_routes.dart';
 import '../../services/auth_provider.dart';
+import '../../services/notification_service.dart';
 import '../bosque/widgets/bosque_feed_widget.dart';
 import '../bosque/widgets/post_creator.dart';
 
@@ -75,12 +77,7 @@ class DashboardScreen extends StatelessWidget {
                       label: 'Cronograma',
                       route: AppRoutes.cronograma,
                     ),
-                    _buildModuleIcon(
-                      context: context,
-                      icon: Icons.notifications,
-                      label: 'Alertas',
-                      route: AppRoutes.notificaciones,
-                    ),
+                    _buildNotificationIcon(context, user?.id),
                     _buildModuleIcon(
                       context: context,
                       icon: Icons.calendar_today,
@@ -100,16 +97,48 @@ class DashboardScreen extends StatelessWidget {
       ),
       floatingActionButton: (user?.role.index == 1 || user?.role.index == 2) 
           ? FloatingActionButton(
-              onPressed: () {
-                if (user?.bosqueId == null || user!.bosqueId!.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Debes pertenecer a un bosque para crear publicaciones.')),
-                  );
-                  return;
+              onPressed: () async {
+                String? targetBosqueId = user?.bosqueId; String? bosqueNombre;
+                
+                // Autosanación para coordinadores antiguos
+                if ((targetBosqueId == null || targetBosqueId.isEmpty) && user?.role.index == 1) {
+                  try {
+                    final query = await FirebaseFirestore.instance
+                        .collection('bosques')
+                        .where('liderId', isEqualTo: user!.id)
+                        .limit(1)
+                        .get();
+                    if (query.docs.isNotEmpty) {
+                      targetBosqueId = query.docs.first.id;
+                      bosqueNombre = query.docs.first.data()['nombre'] ?? 'Bosque';
+                      // Actualizar su perfil de paso
+                      await FirebaseFirestore.instance.collection('users').doc(user.id).update({
+                        'bosqueId': targetBosqueId,
+                      });
+                    }
+                  } catch (e) {
+                    debugPrint('Error buscando bosque del coordinador: $e');
+                  }
                 }
+
+                if (!context.mounted) return;
+
+                if (targetBosqueId == null || targetBosqueId.isEmpty) {
+                  if (user?.role.index == 2) {
+                    // Super‑admin: usar bosque global
+                    targetBosqueId = 'global';
+                    bosqueNombre = 'Comunidad';
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Debes pertenecer a un bosque para crear publicaciones.')),
+                    );
+                    return;
+                  }
+                }
+                
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => PostCreator(bosqueId: user.bosqueId!)),
+                  MaterialPageRoute(builder: (context) => PostCreator(bosqueId: targetBosqueId!, bosqueNombre: bosqueNombre!)),
                 );
               },
               backgroundColor: AppColors.primary,
@@ -117,6 +146,46 @@ class DashboardScreen extends StatelessWidget {
               tooltip: 'Crear publicación',
             )
           : null,
+    );
+  }
+
+  Widget _buildNotificationIcon(BuildContext context, String? userId) {
+    return Column(
+      children: [
+        InkWell(
+          onTap: () => Navigator.pushNamed(context, AppRoutes.notificaciones),
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: userId != null
+                ? StreamBuilder<int>(
+                    stream: NotificationService().streamUnreadCount(userId),
+                    builder: (context, snapshot) {
+                      final count = snapshot.data ?? 0;
+                      return Badge(
+                        isLabelVisible: count > 0,
+                        label: Text(
+                          count > 99 ? '99+' : count.toString(),
+                          style: const TextStyle(fontSize: 10, color: Colors.white),
+                        ),
+                        backgroundColor: Colors.red,
+                        child: const Icon(Icons.notifications, color: Colors.white, size: 28),
+                      );
+                    },
+                  )
+                : const Icon(Icons.notifications, color: Colors.white, size: 28),
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Alertas',
+          style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500),
+        ),
+      ],
     );
   }
 

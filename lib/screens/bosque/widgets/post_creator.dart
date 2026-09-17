@@ -9,11 +9,13 @@ import '../../../models/publicacion_model.dart';
 import '../../../services/auth_provider.dart';
 import '../../../services/publicacion_service.dart';
 import '../../../services/supabase_storage_service.dart';
+import '../../../services/notification_service.dart';
 
 class PostCreator extends StatefulWidget {
   final String bosqueId;
+  final String bosqueNombre;
 
-  const PostCreator({Key? key, required this.bosqueId}) : super(key: key);
+  const PostCreator({Key? key, required this.bosqueId, required this.bosqueNombre}) : super(key: key);
 
   @override
   State<PostCreator> createState() => _PostCreatorState();
@@ -81,6 +83,7 @@ class _PostCreatorState extends State<PostCreator> {
       final post = PublicacionModel(
         id: const Uuid().v4(),
         bosqueId: widget.bosqueId,
+        bosqueNombre: widget.bosqueNombre,
         coordinadorId: user.id,
         coordinadorNombre: '${user.name} ${user.apellidos}'.trim(),
         titulo: _tituloCtrl.text.trim(),
@@ -91,6 +94,16 @@ class _PostCreatorState extends State<PostCreator> {
       );
 
       await PublicacionService().crearPublicacion(post);
+
+      // Notificar a los miembros del bosque
+      await NotificationService().notifyBosqueMembers(
+        bosqueId: widget.bosqueId,
+        bosqueNombre: widget.bosqueNombre,
+        type: 'publicacion',
+        title: 'Nueva publicación en ${widget.bosqueNombre}',
+        body: post.titulo,
+        excludeUserId: user.id,
+      );
       
       if (mounted) {
         Navigator.pop(context, true); // Retornar true indica éxito

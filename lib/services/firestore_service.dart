@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/notification_model.dart';
 
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -95,5 +96,75 @@ class FirestoreService {
     } catch (e) {
       rethrow;
     }
+  }
+
+  // ── Notificaciones ──────────────────────────────────────────────────
+
+  /// Agregar una notificación a la sub-colección del usuario
+  Future<void> addNotification(String userId, NotificationModel notification) async {
+    try {
+      await _firestore
+          .collection('notificaciones')
+          .doc(userId)
+          .collection('items')
+          .add(notification.toMap());
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Marcar una notificación como leída
+  Future<void> markNotificationAsRead(String userId, String notificationId) async {
+    try {
+      await _firestore
+          .collection('notificaciones')
+          .doc(userId)
+          .collection('items')
+          .doc(notificationId)
+          .update({'read': true});
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Marcar todas las notificaciones como leídas
+  Future<void> markAllNotificationsAsRead(String userId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('notificaciones')
+          .doc(userId)
+          .collection('items')
+          .where('read', isEqualTo: false)
+          .get();
+      final batch = _firestore.batch();
+      for (final doc in snapshot.docs) {
+        batch.update(doc.reference, {'read': true});
+      }
+      await batch.commit();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Stream de notificaciones del usuario (ordenadas por fecha desc)
+  Stream<QuerySnapshot> streamNotifications(String userId) {
+    return _firestore
+        .collection('notificaciones')
+        .doc(userId)
+        .collection('items')
+        .orderBy('timestamp', descending: true)
+        .limit(50)
+        .snapshots();
+  }
+
+  /// Stream del conteo de notificaciones no leídas
+  Stream<int> streamUnreadNotificationCount(String userId) {
+    return _firestore
+        .collection('notificaciones')
+        .doc(userId)
+        .collection('items')
+        .where('read', isEqualTo: false)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
   }
 }

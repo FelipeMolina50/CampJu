@@ -788,7 +788,7 @@ class _BosqueScreenState extends State<BosqueScreen> {
           ),
         ),
       ),
-      body: _buildForestChat(),
+      body: _miBosqueActual != null ? _buildForestChat() : const Center(child: Text('No hay bosque seleccionado')),
     );
   }
 

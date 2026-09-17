@@ -99,11 +99,11 @@ class _PostCardState extends State<PostCard> {
               child: const Icon(Icons.military_tech, color: AppColors.primaryDark),
             ),
             title: Text(
-              widget.post.coordinadorNombre,
+              widget.post.bosqueNombre,
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             subtitle: Text(
-              'Coordinador del Bosque • ${_formatDate(widget.post.createdAt)}',
+              '${_formatDate(widget.post.createdAt)}',
               style: const TextStyle(fontSize: 12),
             ),
           ),

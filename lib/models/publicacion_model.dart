@@ -5,6 +5,7 @@ class PublicacionModel {
   final String bosqueId;
   final String coordinadorId;
   final String coordinadorNombre;
+  final String bosqueNombre; // Nuevo campo
   final String titulo;
   final String? texto;
   final List<String> mediaUrls;
@@ -18,6 +19,7 @@ class PublicacionModel {
     required this.bosqueId,
     required this.coordinadorId,
     required this.coordinadorNombre,
+    required this.bosqueNombre,
     required this.titulo,
     this.texto,
     required this.mediaUrls,
@@ -33,6 +35,7 @@ class PublicacionModel {
       bosqueId: map['bosqueId'] ?? '',
       coordinadorId: map['coordinadorId'] ?? '',
       coordinadorNombre: map['coordinadorNombre'] ?? 'Coordinador',
+      bosqueNombre: map['bosqueNombre'] ?? '',
       titulo: map['titulo'] ?? '',
       texto: map['texto'],
       mediaUrls: List<String>.from(map['mediaUrls'] ?? []),
@@ -48,6 +51,7 @@ class PublicacionModel {
       'bosqueId': bosqueId,
       'coordinadorId': coordinadorId,
       'coordinadorNombre': coordinadorNombre,
+      'bosqueNombre': bosqueNombre,
       'titulo': titulo,
       'texto': texto,
       'mediaUrls': mediaUrls,

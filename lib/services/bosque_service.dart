@@ -94,19 +94,15 @@ class BosqueService {
         throw Exception('No tienes permisos para crear el bosque. Detalles: $e');
       }
 
-      // 4. Actualizar rol del nuevo coordinador a rol 1 (Coordinador)
+      // 4. Actualizar rol del nuevo coordinador y asignarle el bosqueId
       try {
-        final coordDoc = await _firestoreService.getDocument('users', coordinadorId);
-        final coordData = coordDoc.data() as Map<String, dynamic>?;
-        if (coordData != null) {
-          final currentRole = coordData['role'] ?? 0;
-          if (currentRole == 0) { // Si era campista, subirlo a coordinador
-            await _firestoreService.updateDocument('users', coordinadorId, {'role': 1});
-          }
-        }
+        await _firestoreService.updateDocument('users', coordinadorId, {
+          'role': 1, // Ascender a coordinador
+          'bosqueId': bosque.id, // Asignar el bosque
+          'fechaIngresoBosque': DateTime.now().toIso8601String(),
+        });
       } catch (e) {
-        debugPrint('Error actualizando rol del coordinador: $e');
-        // No bloqueamos la creación del bosque por esto, pero lo logueamos
+        debugPrint('Error actualizando rol y bosqueId del coordinador: $e');
       }
       
       final miembro = MiembroModel(
