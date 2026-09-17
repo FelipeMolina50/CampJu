@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../services/auth_provider.dart';
+import '../../../services/admin_service.dart';
 import '../../../core/routes/app_routes.dart';
 
 class ConfiguracionScreen extends StatefulWidget {
@@ -13,6 +15,48 @@ class ConfiguracionScreen extends StatefulWidget {
 
 class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
   bool _isLoading = false;
+
+  Future<void> _handleResetDatabase() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¡RESET TOTAL!'),
+        content: const Text(
+          '¿Estás absolutamente seguro? Esto borrará todos los bosques, miembros, solicitudes y perfiles de usuario (excepto el tuyo). Esta acción no se puede deshacer.',
+          style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('SÍ, BORRAR TODO'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() => _isLoading = true);
+      try {
+        final adminService = AdminService();
+        await adminService.resetDatabase();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Base de datos reseteada con éxito')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error al resetear: $e')),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
+    }
+  }
 
   Future<void> _confirmarEliminarCuenta() async {
     final passwordController = TextEditingController();
@@ -137,6 +181,17 @@ class _ConfiguracionScreenState extends State<ConfiguracionScreen> {
                 subtitle: const Text('Borra permanentemente todos tus datos'),
                 onTap: _confirmarEliminarCuenta,
               ),
+              if (Provider.of<AuthProvider>(context).user?.email == AppConstants.superAdminEmail) ...[
+                const Divider(height: 32),
+                const Text('Mantenimiento', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.orange)),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: const Icon(Icons.refresh, color: Colors.orange),
+                  title: const Text('Reset de Fábrica', style: TextStyle(color: Colors.orange)),
+                  subtitle: const Text('Borra todo excepto tu cuenta (Uso exclusivo)'),
+                  onTap: _handleResetDatabase,
+                ),
+              ],
             ],
           ),
     );

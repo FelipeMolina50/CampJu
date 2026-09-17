@@ -202,34 +202,7 @@ Future<void> _saveUserToFirestore(User? user, {String? name}) async {
   Future<void> resetPassword(String email) async {
     try {
       final trimmedEmail = email.trim();
-      final methods =
-          await _firebaseAuth.fetchSignInMethodsForEmail(trimmedEmail);
-      debugPrint('Sign in methods for $trimmedEmail: $methods');
-
-      if (methods.isEmpty) {
-        debugPrint(
-            'No sign-in methods found for $trimmedEmail, intentando envío directo de reset para confirmar.');
-        try {
-          await _firebaseAuth.sendPasswordResetEmail(email: trimmedEmail);
-          return;
-        } on FirebaseAuthException catch (e) {
-          if (e.code == 'user-not-found' || e.code == 'invalid-email') {
-            rethrow;
-          }
-          rethrow;
-        }
-      }
-
-      if (!methods.contains('password')) {
-        final providerLabel =
-            methods.contains('google.com') ? 'Google' : methods.join(', ');
-        throw FirebaseAuthException(
-          code: 'no-password-provider',
-          message:
-              'Esta cuenta está registrada con $providerLabel. Usa ese método para iniciar sesión.',
-        );
-      }
-
+      // Enviar directamente: la validación de existencia ya se hizo en el provider
       await _firebaseAuth.sendPasswordResetEmail(email: trimmedEmail);
     } on FirebaseAuthException catch (e) {
       debugPrint(

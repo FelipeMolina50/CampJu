@@ -265,7 +265,25 @@ class AuthProvider extends ChangeNotifier {
     _errorCode = null;
     notifyListeners();
     try {
-      await _authService.resetPassword(email);
+      final trimmedEmail = email.trim();
+
+      // 1. Verificar en Firestore si el correo está registrado
+      final query = await FirebaseFirestore.instance
+          .collection('users')
+          .where('email', isEqualTo: trimmedEmail)
+          .limit(1)
+          .get();
+
+      if (query.docs.isEmpty) {
+        _errorCode = 'user-not-found';
+        _errorMessage = 'Este correo no está registrado.';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
+      // 2. Existe → enviar correo de recuperación
+      await _authService.resetPassword(trimmedEmail);
       _errorCode = null;
       _isLoading = false;
       notifyListeners();

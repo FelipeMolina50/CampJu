@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../core/constants/app_constants.dart';
 import 'auth_service.dart';
+import 'bosque_service.dart';
 import 'package:flutter/foundation.dart';
 
 class AdminService {
@@ -107,6 +108,59 @@ class AdminService {
       });
     } catch (e) {
       debugPrint('Error en actualizarUsuario: $e');
+      rethrow;
+    }
+  }
+
+  /// LIMPIEZA TOTAL: Borra bosques, miembros, solicitudes y usuarios (excepto superAdmin)
+  Future<void> resetDatabase() async {
+    try {
+      // 1. Borrar Bosques
+      final bosques = await _firestore.collection('bosques').get();
+      for (var doc in bosques.docs) {
+        await doc.reference.delete();
+      }
+
+      // 2. Borrar Miembros
+      final miembros = await _firestore.collection('miembros').get();
+      for (var doc in miembros.docs) {
+        await doc.reference.delete();
+      }
+
+      // 3. Borrar Solicitudes
+      final solicitudes = await _firestore.collection('solicitudes').get();
+      for (var doc in solicitudes.docs) {
+        await doc.reference.delete();
+      }
+
+      // 4. Borrar Usuarios (EXCEPTO Super Admin)
+      final usuarios = await _firestore.collection('users').get();
+      for (var doc in usuarios.docs) {
+        final data = doc.data();
+        if (data['email'] != AppConstants.superAdminEmail) {
+          await doc.reference.delete();
+        } else {
+          // Limpiar el bosqueId del super admin también
+          await doc.reference.update({
+            'bosqueId': null,
+            'fechaIngresoBosque': null,
+            'role': 2, // Asegurar que sigue siendo Admin
+          });
+        }
+      }
+      debugPrint('Reset de base de datos completado con éxito');
+    } catch (e) {
+      debugPrint('Error en resetDatabase: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> eliminarBosque(String bosqueId, String email) async {
+    try {
+      final bosqueService = BosqueService();
+      await bosqueService.eliminarBosque(bosqueId, email);
+    } catch (e) {
+      debugPrint('Error en eliminarBosque admin: $e');
       rethrow;
     }
   }

@@ -128,6 +128,45 @@ class BosqueService {
     }
   }
 
+  Future<void> eliminarBosque(String bosqueId, String email) async {
+    try {
+      if (email != AppConstants.superAdminEmail) {
+        throw Exception('Correo no autorizado para eliminar bosques');
+      }
+      
+      // 1. Borrar solicitudes
+      final solicitudes = await _firestoreService.getCollectionDocuments(_solicitudCollection,
+          where: (ref) => ref.where('bosqueId', isEqualTo: bosqueId));
+      for (var doc in solicitudes.docs) {
+        await _firestoreService.deleteDocument(_solicitudCollection, doc.id);
+      }
+      
+      // 2. Borrar miembros y limpiar usuarios
+      final miembros = await _firestoreService.getCollectionDocuments(_miembroCollection,
+          where: (ref) => ref.where('bosqueId', isEqualTo: bosqueId));
+      for (var doc in miembros.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final userId = data['usuarioId'] as String?;
+        if (userId != null) {
+          try {
+            await _firestoreService.updateDocument('users', userId, {
+              'bosqueId': null,
+              'fechaIngresoBosque': null,
+            });
+          } catch (e) {
+            debugPrint('No se pudo limpiar bosqueId para usuario $userId');
+          }
+        }
+        await _firestoreService.deleteDocument(_miembroCollection, doc.id);
+      }
+      
+      // 3. Borrar el bosque
+      await _firestoreService.deleteDocument(_bosqueCollection, bosqueId);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<void> crearSolicitud(SolicitudModel solicitud) async {
     try {
       await _firestoreService.setDocument(
