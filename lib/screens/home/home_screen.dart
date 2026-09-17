@@ -13,12 +13,23 @@ import 'dashboard_screen.dart';
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
+  static void irATab(BuildContext context, int index) {
+    final state = context.findAncestorStateOfType<_HomeScreenState>();
+    if (state != null) {
+      state.cambiarTab(index);
+    }
+  }
+
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
+
+  void cambiarTab(int index) {
+    setState(() => _currentIndex = index);
+  }
 
   final List<Widget> _tabs = [
     const DashboardScreen(),

@@ -259,6 +259,21 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> reloadUserData() async {
+    if (_user != null) {
+      final updated = await _loadUserData(_user!.id);
+      if (updated != null) {
+        _user = updated;
+        notifyListeners();
+      }
+    }
+  }
+
+  void updateUser(UserModel updatedUser) {
+    _user = updatedUser;
+    notifyListeners();
+  }
+
   Future<bool> resetPassword(String email) async {
     _isLoading = true;
     _errorMessage = null;

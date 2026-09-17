@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../services/auth_provider.dart';
+import '../../../services/supabase_storage_service.dart';
+import '../../../services/bosque_service.dart';
+import '../../../models/miembro_model.dart';
+import '../home/home_screen.dart';
 
 class PerfilScreen extends StatelessWidget {
   const PerfilScreen({super.key});
@@ -143,15 +148,69 @@ class PerfilScreen extends StatelessWidget {
                       // Avatar and User Info
                       Column(
                         children: [
-                          CircleAvatar(
-                            radius: 48,
-                            backgroundImage: user.photoUrl != null
-                                ? NetworkImage(user.photoUrl!)
-                                : null,
-                            backgroundColor: AppColors.primary,
-                            child: user.photoUrl == null
-                                ? const Icon(Icons.person, size: 48, color: Colors.white)
-                                : null,
+                          Stack(
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  if (user.photoUrl != null && user.photoUrl!.isNotEmpty) {
+                                    SupabaseStorageService.mostrarVisorImagen(
+                                      context,
+                                      imageUrl: user.photoUrl!,
+                                      titulo: '${user.name} ${user.apellidos}',
+                                    );
+                                  }
+                                },
+                                child: CircleAvatar(
+                                  radius: 52,
+                                  backgroundImage: user.photoUrl != null && user.photoUrl!.isNotEmpty
+                                      ? NetworkImage(user.photoUrl!)
+                                      : null,
+                                  backgroundColor: AppColors.primary.withOpacity( 0.15),
+                                  child: user.photoUrl == null || user.photoUrl!.isEmpty
+                                      ? const Icon(Icons.person, size: 52, color: AppColors.primary)
+                                      : null,
+                                ),
+                              ),
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: Material(
+                                  color: AppColors.primary,
+                                  shape: const CircleBorder(),
+                                  elevation: 3,
+                                  child: InkWell(
+                                    customBorder: const CircleBorder(),
+                                    onTap: () async {
+                                      try {
+                                        final url = await SupabaseStorageService.subirFotoUsuario(user.id);
+                                        if (url != null) {
+                                          await FirebaseFirestore.instance
+                                              .collection('users')
+                                              .doc(user.id)
+                                              .update({'photoUrl': url});
+                                          await authProvider.reloadUserData();
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text('Foto de perfil actualizada con éxito')),
+                                            );
+                                          }
+                                        }
+                                      } catch (e) {
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text('Error al cambiar foto: $e'), backgroundColor: Colors.red),
+                                          );
+                                        }
+                                      }
+                                    },
+                                    child: const Padding(
+                                      padding: EdgeInsets.all(8.0),
+                                      child: Icon(Icons.camera_alt, color: Colors.white, size: 18),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 16),
                           Text(
@@ -197,77 +256,90 @@ class PerfilScreen extends StatelessWidget {
                       const SizedBox(height: 24),
 
                       // Bosque Badge
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              AppColors.primary.withOpacity(0.1),
-                              AppColors.primaryDark.withOpacity(0.1),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Row(
-                          children: [
-                            const CircleAvatar(
-                              radius: 24,
-                              backgroundColor: AppColors.primary,
-                              child: Icon(Icons.forest, color: Colors.white, size: 24),
+                      FutureBuilder<MiembroModel?>(
+                        future: BosqueService().obtenerMiMembresia(user.id),
+                        builder: (context, snapshot) {
+                          final tieneMembresia = snapshot.data != null;
+                          final tieneBosqueId = user.bosqueId != null && user.bosqueId!.isNotEmpty;
+                          final tieneBosque = tieneMembresia || tieneBosqueId;
+
+                          return Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  AppColors.primary.withOpacity( 0.1),
+                                  AppColors.primaryDark.withOpacity( 0.1),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(16),
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: user.bosqueId != null
-                                  ? Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          'Mi Bosque',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: AppColors.textSecondary,
-                                          ),
-                                        ),
-                                        Text(
-                                          'Asignado', 
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w500,
-                                            color: AppColors.textPrimary,
-                                          ),
-                                        ),
-                                      ],
-                                    )
-                                  : Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          'Sin bosque asignado',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: AppColors.textSecondary,
-                                          ),
-                                        ),
-                                        ElevatedButton(
-                                          onPressed: () {
-                                            Navigator.pushNamed(context, AppRoutes.bosque);
-                                          },
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: AppColors.primary,
-                                            foregroundColor: Colors.white,
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 16,
-                                              vertical: 8,
+                            child: Row(
+                              children: [
+                                const CircleAvatar(
+                                  radius: 24,
+                                  backgroundColor: AppColors.primary,
+                                  child: Icon(Icons.forest, color: Colors.white, size: 24),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: tieneBosque
+                                      ? Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            const Text(
+                                              'Mi Bosque',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: AppColors.textSecondary,
+                                              ),
                                             ),
-                                            textStyle: const TextStyle(fontSize: 12),
-                                          ),
-                                          child: const Text('Buscar bosque'),
+                                            Text(
+                                              snapshot.data?.rol == 'coordinador'
+                                                  ? 'Coordinador Asignado'
+                                                  : 'Bosque Asignado',
+                                              style: const TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w600,
+                                                color: AppColors.textPrimary,
+                                              ),
+                                            ),
+                                          ],
+                                        )
+                                      : Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            const Text(
+                                              'Sin bosque asignado',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: AppColors.textSecondary,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 6),
+                                            ElevatedButton.icon(
+                                              icon: const Icon(Icons.search, size: 16),
+                                              onPressed: () {
+                                                HomeScreen.irATab(context, 1);
+                                              },
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: AppColors.primary,
+                                                foregroundColor: Colors.white,
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 16,
+                                                  vertical: 8,
+                                                ),
+                                                textStyle: const TextStyle(fontSize: 12),
+                                              ),
+                                              label: const Text('Buscar bosque'),
+                                            ),
+                                          ],
                                         ),
-                                      ],
-                                    ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
                     ],
                   ),

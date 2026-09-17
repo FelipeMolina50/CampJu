@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import '../../../services/supabase_storage_service.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../services/auth_provider.dart';
 import '../../../models/user_model.dart';
@@ -98,7 +98,7 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80, maxWidth: 800);
 
     if (pickedFile != null) {
       setState(() {
@@ -111,13 +111,13 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
     if (_selectedImage == null) return null;
 
     try {
-      final ref = FirebaseStorage.instance.ref().child('profile_images/$userId.jpg');
-      await ref.putFile(_selectedImage!);
-      return await ref.getDownloadURL();
+      return await SupabaseStorageService.subirFotoUsuario(userId, file: _selectedImage);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al subir imagen: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al subir imagen a Supabase: $e')),
+        );
+      }
       return null;
     }
   }

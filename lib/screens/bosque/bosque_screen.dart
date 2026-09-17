@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_styles.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../core/widgets/custom_button.dart';
@@ -11,6 +10,7 @@ import '../../../core/widgets/custom_textfield.dart';
 import '../../../models/bosque_model.dart';
 import '../../../models/miembro_model.dart';
 import '../../../models/solicitud_model.dart';
+import '../../../models/user_model.dart';
 import '../../../services/auth_provider.dart';
 import '../../../services/bosque_service.dart';
 import '../../../services/admin_service.dart';
@@ -18,7 +18,7 @@ import '../../../services/firestore_service.dart';
 import '../../../services/supabase_storage_service.dart';
 import '../../../models/mensaje_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'widgets/camping_chat_background.dart';
 
 class BosqueScreen extends StatefulWidget {
   const BosqueScreen({super.key});
@@ -38,6 +38,24 @@ class _BosqueScreenState extends State<BosqueScreen> {
   SolicitudModel? _miSolicitud;
   List<MiembroModel> _miembrosDelBosque = [];
   List<SolicitudModel> _solicitudesPendientes = [];
+  Map<String, UserModel> _datosCampistas = {};
+
+  Future<void> _cargarUsuariosMiembros() async {
+    final Map<String, UserModel> mapa = {};
+    for (final m in _miembrosDelBosque) {
+      try {
+        final doc = await FirebaseFirestore.instance.collection('users').doc(m.usuarioId).get();
+        if (doc.exists && doc.data() != null) {
+          mapa[m.usuarioId] = UserModel.fromJson({...doc.data()!, 'id': doc.id});
+        }
+      } catch (_) {}
+    }
+    if (mounted) {
+      setState(() {
+        _datosCampistas = mapa;
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -92,6 +110,7 @@ class _BosqueScreenState extends State<BosqueScreen> {
     setState(() => _isLoading = true);
     try {
       _miembrosDelBosque = await _bosqueService.obtenerMiembros(bosque.id);
+      _cargarUsuariosMiembros();
       _solicitudesPendientes = await _bosqueService.obtenerSolicitudes(bosque.id);
       setState(() {
         _miBosqueActual = bosque;
@@ -125,6 +144,7 @@ class _BosqueScreenState extends State<BosqueScreen> {
               setState(() { _miMembresia = null; _miBosqueActual = null; _miembrosDelBosque = []; });
             } else {
               _miembrosDelBosque = await _bosqueService.obtenerMiembros(_miMembresia!.bosqueId);
+              _cargarUsuariosMiembros();
               if (_isCoordinador) {
                 _solicitudesPendientes = await _bosqueService.obtenerSolicitudes(_miMembresia!.bosqueId);
                 
@@ -649,47 +669,122 @@ class _BosqueScreenState extends State<BosqueScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(80),
+        preferredSize: const Size.fromHeight(74),
         child: Container(
-          padding: const EdgeInsets.only(top: 40),
-          decoration: const BoxDecoration(gradient: LinearGradient(colors: [AppColors.primary, AppColors.primaryDark])),
-          child: Row(
-            children: [
-              if (_isAdmin && _miMembresia == null) 
-                IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => setState(() => _miBosqueActual = null)),
-              Expanded(
-                child: InkWell(
-                  onTap: _mostrarPerfilBosque,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: Colors.white24,
-                          backgroundImage: (_miBosqueActual?.fotoUrl != null && _miBosqueActual!.fotoUrl!.isNotEmpty)
-                              ? NetworkImage(_miBosqueActual!.fotoUrl!)
-                              : null,
-                          child: (_miBosqueActual?.fotoUrl == null || _miBosqueActual!.fotoUrl!.isEmpty)
-                              ? const Icon(Icons.forest, color: Colors.white)
-                              : null,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(_miBosqueActual?.nombre ?? 'Mi Bosque', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                              const Text('Toca aquí para ver el perfil', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF0D3323), // Verde bosque profundo campamento
+                Color(0xFF1B4D3E),
+                Color(0xFF236349),
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.25),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
               ),
             ],
+          ),
+          child: SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              child: Row(
+                children: [
+                  if (_isAdmin && _miMembresia == null)
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+                      onPressed: () => setState(() => _miBosqueActual = null),
+                    ),
+                  // Avatar con aro estético y zoom al tocar
+                  GestureDetector(
+                    onTap: () {
+                      if (_miBosqueActual?.fotoUrl != null && _miBosqueActual!.fotoUrl!.isNotEmpty) {
+                        SupabaseStorageService.mostrarVisorImagen(
+                          context,
+                          imageUrl: _miBosqueActual!.fotoUrl!,
+                          titulo: _miBosqueActual!.nombre,
+                        );
+                      } else {
+                        _mostrarPerfilBosque();
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white.withOpacity( 0.85), width: 1.6),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity( 0.2),
+                            blurRadius: 4,
+                          ),
+                        ],
+                      ),
+                      child: CircleAvatar(
+                        radius: 22,
+                        backgroundColor: Colors.white24,
+                        backgroundImage: (_miBosqueActual?.fotoUrl != null && _miBosqueActual!.fotoUrl!.isNotEmpty)
+                            ? NetworkImage(_miBosqueActual!.fotoUrl!)
+                            : null,
+                        child: (_miBosqueActual?.fotoUrl == null || _miBosqueActual!.fotoUrl!.isEmpty)
+                            ? const Icon(Icons.forest, color: Colors.white, size: 22)
+                            : null,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: InkWell(
+                      onTap: _mostrarPerfilBosque,
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              _miBosqueActual?.nombre ?? 'Mi Bosque',
+                              style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                letterSpacing: 0.2,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              children: [
+                                const Icon(Icons.park, size: 12, color: AppColors.accentYellow),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${_miembrosDelBosque.length} miembros • Toca para ver perfil',
+                                  style: const TextStyle(color: Colors.white70, fontSize: 11),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.info_outline, color: Colors.white, size: 22),
+                    tooltip: 'Perfil del Bosque',
+                    onPressed: _mostrarPerfilBosque,
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -717,15 +812,26 @@ class _BosqueScreenState extends State<BosqueScreen> {
                   Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
                   Stack(
                     children: [
-                      CircleAvatar(
-                        radius: 50,
-                        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                        backgroundImage: (_miBosqueActual?.fotoUrl != null && _miBosqueActual!.fotoUrl!.isNotEmpty)
-                            ? NetworkImage(_miBosqueActual!.fotoUrl!)
-                            : null,
-                        child: (_miBosqueActual?.fotoUrl == null || _miBosqueActual!.fotoUrl!.isEmpty)
-                            ? const Icon(Icons.forest, size: 50, color: AppColors.primary)
-                            : null,
+                      GestureDetector(
+                        onTap: () {
+                          if (_miBosqueActual?.fotoUrl != null && _miBosqueActual!.fotoUrl!.isNotEmpty) {
+                            SupabaseStorageService.mostrarVisorImagen(
+                              context,
+                              imageUrl: _miBosqueActual!.fotoUrl!,
+                              titulo: _miBosqueActual!.nombre,
+                            );
+                          }
+                        },
+                        child: CircleAvatar(
+                          radius: 50,
+                          backgroundColor: AppColors.primary.withOpacity( 0.1),
+                          backgroundImage: (_miBosqueActual?.fotoUrl != null && _miBosqueActual!.fotoUrl!.isNotEmpty)
+                              ? NetworkImage(_miBosqueActual!.fotoUrl!)
+                              : null,
+                          child: (_miBosqueActual?.fotoUrl == null || _miBosqueActual!.fotoUrl!.isEmpty)
+                              ? const Icon(Icons.forest, size: 50, color: AppColors.primary)
+                              : null,
+                        ),
                       ),
                       if (_isCoordinador)
                         Positioned(
@@ -809,26 +915,131 @@ class _BosqueScreenState extends State<BosqueScreen> {
     final currentUser = authProvider.user;
 
     return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12, left: 4),
+          child: Row(
+            children: [
+              const Icon(Icons.group, size: 18, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Text(
+                'Compañeros del Bosque (${_miembrosDelBosque.length})',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textPrimary),
+              ),
+            ],
+          ),
+        ),
         ..._miembrosDelBosque.map((m) {
           final bool isMe = m.usuarioId == currentUser?.id;
+          final campista = _datosCampistas[m.usuarioId];
+          final photoUrl = campista?.photoUrl;
+          final rango = campista?.rangoDisplay ?? 'Aspirante';
+          final nombreCompleto = campista != null ? '${campista.name} ${campista.apellidos}' : m.nombre;
+
           return Container(
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
-              color: isMe ? AppColors.primary.withOpacity(0.08) : Colors.white,
+              color: isMe ? AppColors.primary.withOpacity( 0.07) : Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: isMe ? Border.all(color: AppColors.primary.withOpacity(0.3)) : null,
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8)],
+              border: isMe ? Border.all(color: AppColors.primary.withOpacity( 0.3)) : Border.all(color: Colors.grey.withOpacity( 0.15)),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity( 0.03), blurRadius: 8)],
             ),
             child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: isMe ? AppColors.primary : AppColors.primary.withOpacity(0.1), 
-                child: Icon(m.rol == 'coordinador' ? Icons.badge : Icons.person, color: isMe ? Colors.white : AppColors.primary, size: 20)
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              onTap: () => _mostrarPerfilCampista(m, campista),
+              leading: GestureDetector(
+                onTap: () {
+                  if (photoUrl != null && photoUrl.isNotEmpty) {
+                    SupabaseStorageService.mostrarVisorImagen(
+                      context,
+                      imageUrl: photoUrl,
+                      titulo: nombreCompleto,
+                    );
+                  } else {
+                    _mostrarPerfilCampista(m, campista);
+                  }
+                },
+                child: Hero(
+                  tag: 'member_avatar_${m.usuarioId}',
+                  child: CircleAvatar(
+                    radius: 24,
+                    backgroundColor: isMe ? AppColors.primary : const Color(0xFFE8ECE6),
+                    backgroundImage: (photoUrl != null && photoUrl.isNotEmpty)
+                        ? NetworkImage(photoUrl)
+                        : null,
+                    child: (photoUrl == null || photoUrl.isEmpty)
+                        ? Icon(
+                            m.rol == 'coordinador' ? Icons.military_tech : Icons.person,
+                            color: isMe ? Colors.white : AppColors.primary,
+                            size: 24,
+                          )
+                        : null,
+                  ),
+                ),
               ),
-              title: Text(isMe ? '${m.nombre} (Tú)' : m.nombre, style: TextStyle(fontWeight: isMe ? FontWeight.bold : FontWeight.normal, color: isMe ? AppColors.primary : AppColors.textPrimary)),
-              subtitle: Text(m.rol, style: TextStyle(color: isMe ? AppColors.primary.withOpacity(0.7) : Colors.grey)),
-              trailing: isMe ? const Icon(Icons.star, color: AppColors.primary, size: 16) : null,
+              title: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      isMe ? '$nombreCompleto (Tú)' : nombreCompleto,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: isMe ? AppColors.primary : AppColors.textPrimary,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (campista?.esArbolMayor == true)
+                    const Padding(
+                      padding: EdgeInsets.only(left: 4),
+                      child: Icon(Icons.park, color: Colors.green, size: 16),
+                    ),
+                ],
+              ),
+              subtitle: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: m.rol == 'coordinador' ? const Color(0xFFFFF3CD) : const Color(0xFFD8F3DC),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            m.rol == 'coordinador' ? Icons.star : Icons.person,
+                            size: 11,
+                            color: m.rol == 'coordinador' ? const Color(0xFF856404) : const Color(0xFF1B4332),
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            m.rol == 'coordinador' ? 'Coordinador' : 'Campista',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: m.rol == 'coordinador' ? const Color(0xFF856404) : const Color(0xFF1B4332),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Ascenso: $rango',
+                        style: const TextStyle(color: Colors.grey, fontSize: 12),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
             ),
           );
         }).toList(),
@@ -844,6 +1055,335 @@ class _BosqueScreenState extends State<BosqueScreen> {
           const Center(child: Text('Si sales, deberás solicitar unirte de nuevo.', style: TextStyle(color: Colors.grey, fontSize: 12))),
         ],
       ],
+    );
+  }
+
+  void _mostrarPerfilCampista(MiembroModel m, UserModel? campista) async {
+    UserModel? user = campista;
+    if (user == null) {
+      try {
+        final doc = await FirebaseFirestore.instance.collection('users').doc(m.usuarioId).get();
+        if (doc.exists && doc.data() != null) {
+          user = UserModel.fromJson({...doc.data()!, 'id': doc.id});
+        }
+      } catch (_) {}
+    }
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        height: MediaQuery.of(context).size.height * 0.85,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: Column(
+                  children: [
+                    Center(
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          GestureDetector(
+                            onTap: () {
+                              if (user?.photoUrl != null && user!.photoUrl!.isNotEmpty) {
+                                SupabaseStorageService.mostrarVisorImagen(
+                                  context,
+                                  imageUrl: user.photoUrl!,
+                                  titulo: '${user.name} ${user.apellidos}',
+                                );
+                              }
+                            },
+                            child: Hero(
+                              tag: 'campista_${m.usuarioId}',
+                              child: Container(
+                                padding: const EdgeInsets.all(3),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFF2D6A4F), Color(0xFFD4A373)],
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity( 0.12),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: CircleAvatar(
+                                  radius: 54,
+                                  backgroundColor: const Color(0xFFE8ECE6),
+                                  backgroundImage: (user?.photoUrl != null && user!.photoUrl!.isNotEmpty)
+                                      ? NetworkImage(user.photoUrl!)
+                                      : null,
+                                  child: (user?.photoUrl == null || user!.photoUrl!.isEmpty)
+                                      ? const Icon(Icons.person, size: 54, color: AppColors.primary)
+                                      : null,
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (user?.photoUrl != null && user!.photoUrl!.isNotEmpty)
+                            Positioned(
+                              bottom: 0,
+                              right: 4,
+                              child: Container(
+                                padding: const EdgeInsets.all(5),
+                                decoration: const BoxDecoration(
+                                  color: AppColors.primary,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.zoom_in, color: Colors.white, size: 16),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      user != null ? '${user.name} ${user.apellidos}' : m.nombre,
+                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: m.rol == 'coordinador' ? const Color(0xFFFFF3CD) : const Color(0xFFD8F3DC),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: m.rol == 'coordinador' ? const Color(0xFFFFC107) : const Color(0xFF52B788),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            m.rol == 'coordinador' ? Icons.military_tech : Icons.verified,
+                            size: 14,
+                            color: m.rol == 'coordinador' ? const Color(0xFF856404) : const Color(0xFF1B4332),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            m.rol == 'coordinador' ? 'Coordinador del Bosque' : 'Campista Activo',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: m.rol == 'coordinador' ? const Color(0xFF856404) : const Color(0xFF1B4332),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Tarjeta de Ascenso / Rango
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFF1B4D3E),
+                            Color(0xFF2D6A4F),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF1B4D3E).withOpacity( 0.25),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity( 0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.military_tech, color: Color(0xFFFFD166), size: 32),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Nivel de Ascenso Campista',
+                                  style: TextStyle(color: Colors.white70, fontSize: 12),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  user?.rangoDisplay ?? 'Aspirante',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (user?.esArbolMayor == true)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF52B788),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.park, color: Colors.white, size: 14),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Árbol Mayor',
+                                    style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    // Información general del compañero
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8F9FA),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.grey[200]!),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Información del Campista',
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                          ),
+                          const Divider(height: 20),
+                          _buildItemInfo(Icons.location_on, 'Municipio', user?.municipio ?? 'Cundinamarca'),
+                          const SizedBox(height: 10),
+                          _buildItemInfo(Icons.forest, 'Bosque', _miBosqueActual?.nombre ?? 'Bosque CampJu'),
+                          const SizedBox(height: 10),
+                          _buildItemInfo(
+                            Icons.calendar_today,
+                            'En el bosque desde',
+                            '${m.fechaIngreso.day}/${m.fechaIngreso.month}/${m.fechaIngreso.year}',
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    // Cursos y Formación del Campista
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8F9FA),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.grey[200]!),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.school, size: 20, color: AppColors.primary),
+                              SizedBox(width: 8),
+                              Text(
+                                'Formación y Cursos CampJu',
+                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              _buildCursoChip(Icons.terrain, 'Campismo Básico', true),
+                              _buildCursoChip(Icons.medical_services, 'Primeros Auxilios', true),
+                              _buildCursoChip(Icons.explore, 'Orientación y Nudos', user?.rango != 'aspirante'),
+                              _buildCursoChip(Icons.groups, 'Liderazgo Juvenil', m.rol == 'coordinador' || user?.esArbolMayor == true),
+                              _buildCursoChip(Icons.eco, 'Ecología y Bosques', true),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildItemInfo(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: AppColors.primary),
+        const SizedBox(width: 10),
+        Text('$label: ', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.black87)),
+        Expanded(
+          child: Text(value, style: const TextStyle(fontSize: 13, color: Colors.black54), overflow: TextOverflow.ellipsis),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCursoChip(IconData icon, String titulo, bool completado) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: completado ? const Color(0xFFE8F5E9) : const Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: completado ? const Color(0xFFA5D6A7) : const Color(0xFFE0E0E0),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: completado ? const Color(0xFF2E7D32) : Colors.grey),
+          const SizedBox(width: 6),
+          Text(titulo, style: TextStyle(fontSize: 12, fontWeight: completado ? FontWeight.w600 : FontWeight.normal, color: completado ? const Color(0xFF1B5E20) : Colors.grey)),
+          const SizedBox(width: 4),
+          Icon(
+            completado ? Icons.check_circle : Icons.lock_outline,
+            size: 13,
+            color: completado ? const Color(0xFF2E7D32) : Colors.grey,
+          ),
+        ],
+      ),
     );
   }
 
@@ -880,7 +1420,7 @@ class _BosqueScreenState extends State<BosqueScreen> {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final user = authProvider.user;
       if (user == null) return;
-      final msg = MensajeModel(id: '', senderId: user.id, senderName: user.name, message: '📷 Imagen', timestamp: DateTime.now(), tipo: 'imagen', imageUrl: url);
+      final msg = MensajeModel(id: '', senderId: user.id, senderName: user.name, message: 'Foto', timestamp: DateTime.now(), tipo: 'imagen', imageUrl: url);
       await _bosqueService.enviarMensaje(_miBosqueActual!.id, msg);
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
@@ -899,7 +1439,7 @@ class _BosqueScreenState extends State<BosqueScreen> {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final user = authProvider.user;
       if (user == null) return;
-      final msg = MensajeModel(id: '', senderId: user.id, senderName: user.name, message: '📎 ${result.nombre}', timestamp: DateTime.now(), tipo: 'archivo', imageUrl: result.url, fileName: result.nombre);
+      final msg = MensajeModel(id: '', senderId: user.id, senderName: user.name, message: result.nombre, timestamp: DateTime.now(), tipo: 'archivo', imageUrl: result.url, fileName: result.nombre);
       await _bosqueService.enviarMensaje(_miBosqueActual!.id, msg);
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
@@ -909,40 +1449,63 @@ class _BosqueScreenState extends State<BosqueScreen> {
   }
 
   Widget _buildForestChat() {
-    return Column(
-      children: [
-        Expanded(
-          child: StreamBuilder<List<MensajeModel>>(
-            stream: _bosqueService.getMensajesStream(_miBosqueActual!.id),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (snapshot.hasError) {
-                return const Center(child: Text('Error al cargar mensajes', style: TextStyle(color: Colors.grey)));
-              }
-              final mensajes = snapshot.data ?? [];
-              if (mensajes.isEmpty) {
-                return const Center(child: Text('No hay mensajes aún. ¡Sé el primero en saludar!', style: TextStyle(color: Colors.grey)));
-              }
-              final authProvider = Provider.of<AuthProvider>(context, listen: false);
-              final currentUserId = authProvider.user?.id;
-              
-              return ListView.builder(
-                reverse: true,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                itemCount: mensajes.length,
-                itemBuilder: (context, index) {
-                  final msg = mensajes[index];
-                  final isMe = msg.senderId == currentUserId;
-                  return _buildMessageBubble(msg, isMe);
-                },
-              );
-            },
+    return CampingChatBackground(
+      child: Column(
+        children: [
+          Expanded(
+            child: StreamBuilder<List<MensajeModel>>(
+              stream: _bosqueService.getMensajesStream(_miBosqueActual!.id),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return const Center(child: Text('Error al cargar mensajes', style: TextStyle(color: Colors.grey)));
+                }
+                final mensajes = snapshot.data ?? [];
+                if (mensajes.isEmpty) {
+                  return Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity( 0.85),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withOpacity( 0.05), blurRadius: 6),
+                        ],
+                      ),
+                      child: const Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.forest, size: 36, color: AppColors.primary),
+                          SizedBox(height: 6),
+                          Text('¡Bienvenidos al Bosque!', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primaryDark)),
+                          SizedBox(height: 2),
+                          Text('No hay mensajes aún. ¡Sé el primero en saludar!', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+                final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                final currentUserId = authProvider.user?.id;
+                
+                return ListView.builder(
+                  reverse: true,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  itemCount: mensajes.length,
+                  itemBuilder: (context, index) {
+                    final msg = mensajes[index];
+                    final isMe = msg.senderId == currentUserId;
+                    return _buildMessageBubble(msg, isMe);
+                  },
+                );
+              },
+            ),
           ),
-        ),
-        _buildChatInput(),
-      ],
+          _buildChatInput(),
+        ],
+      ),
     );
   }
 
@@ -959,7 +1522,7 @@ class _BosqueScreenState extends State<BosqueScreen> {
             bottomRight: isMe ? const Radius.circular(0) : const Radius.circular(16),
             bottomLeft: !isMe ? const Radius.circular(0) : const Radius.circular(16),
           ),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 2))],
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity( 0.05), blurRadius: 4, offset: const Offset(0, 2))],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -972,62 +1535,65 @@ class _BosqueScreenState extends State<BosqueScreen> {
             if (msg.tipo == 'imagen' && msg.imageUrl != null) ...[
               GestureDetector(
                 onTap: () {
-                  showDialog(
-                    context: context,
-                    builder: (_) => Dialog(
-                      backgroundColor: Colors.transparent,
-                      insetPadding: const EdgeInsets.all(8),
-                      child: Stack(
-                        alignment: Alignment.topRight,
-                        children: [
-                          InteractiveViewer(
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Image.network(msg.imageUrl!, fit: BoxFit.contain),
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.close, color: Colors.white, size: 28),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                        ],
-                      ),
-                    ),
+                  SupabaseStorageService.mostrarVisorImagen(
+                    context,
+                    imageUrl: msg.imageUrl!,
+                    titulo: 'Foto de ${msg.senderName}',
                   );
                 },
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: Image.network(
-                    msg.imageUrl!,
-                    fit: BoxFit.cover,
-                    loadingBuilder: (context, child, progress) {
-                      if (progress == null) return child;
-                      return Container(
-                        height: 180,
-                        alignment: Alignment.center,
-                        child: const CircularProgressIndicator(strokeWidth: 2),
-                      );
-                    },
-                    errorBuilder: (_, __, ___) => const Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Icon(Icons.broken_image, color: Colors.grey, size: 40),
-                    ),
+                  child: Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      Image.network(
+                        msg.imageUrl!,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, progress) {
+                          if (progress == null) return child;
+                          return Container(
+                            height: 180,
+                            alignment: Alignment.center,
+                            child: const CircularProgressIndicator(strokeWidth: 2),
+                          );
+                        },
+                        errorBuilder: (_, __, ___) => const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Icon(Icons.broken_image, color: Colors.grey, size: 40),
+                        ),
+                      ),
+                      Container(
+                        margin: const EdgeInsets.all(6),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.zoom_in, color: Colors.white, size: 14),
+                            SizedBox(width: 2),
+                            Text('Ver / Descargar', style: TextStyle(color: Colors.white, fontSize: 10)),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
               const SizedBox(height: 4),
             ] else if (msg.tipo == 'archivo' && msg.imageUrl != null) ...[
               InkWell(
-                onTap: () async {
-                  final uri = Uri.tryParse(msg.imageUrl!);
-                  if (uri != null && await canLaunchUrl(uri)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  }
-                },
+                onTap: () => SupabaseStorageService.abrirODescargarArchivo(
+                  context,
+                  url: msg.imageUrl!,
+                  nombre: msg.fileName,
+                ),
                 child: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: isMe ? Colors.white.withValues(alpha: 0.15) : AppColors.background,
+                    color: isMe ? Colors.white.withOpacity( 0.15) : AppColors.background,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
@@ -1087,12 +1653,12 @@ class _BosqueScreenState extends State<BosqueScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (_isSendingMedia)
-          LinearProgressIndicator(color: AppColors.primary, backgroundColor: AppColors.primary.withValues(alpha: 0.1)),
+          LinearProgressIndicator(color: AppColors.primary, backgroundColor: AppColors.primary.withOpacity( 0.1)),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
             color: Colors.white,
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -2))],
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity( 0.05), blurRadius: 10, offset: const Offset(0, -2))],
           ),
           child: SafeArea(
             child: Row(
