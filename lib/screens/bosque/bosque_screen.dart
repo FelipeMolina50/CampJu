@@ -14,6 +14,8 @@ import '../../../models/solicitud_model.dart';
 import '../../../services/auth_provider.dart';
 import '../../../services/bosque_service.dart';
 import '../../../services/admin_service.dart';
+import '../../../services/firestore_service.dart';
+import '../../../models/mensaje_model.dart';
 
 class BosqueScreen extends StatefulWidget {
   const BosqueScreen({super.key});
@@ -38,6 +40,34 @@ class _BosqueScreenState extends State<BosqueScreen> {
   void initState() {
     super.initState();
     _loadData();
+  }
+
+  void _mostrarBienvenidaCoordinador(String bosqueNombre) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¡Felicidades!', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 24)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.celebration, color: AppColors.accentYellow, size: 64),
+            const SizedBox(height: 16),
+            Text('Has sido asignado como Coordinador del bosque:', textAlign: TextAlign.center, style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 8),
+            Text(bosqueNombre, textAlign: TextAlign.center, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primaryDark)),
+            const SizedBox(height: 16),
+            const Text('Ahora tienes la responsabilidad de guiar a tu equipo. ¡Mucho éxito!', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+            child: const Text('¡Entendido!'),
+          ),
+        ],
+      ),
+    );
   }
 
   bool get _isSuperAdmin {
@@ -94,6 +124,17 @@ class _BosqueScreenState extends State<BosqueScreen> {
               _miembrosDelBosque = await _bosqueService.obtenerMiembros(_miMembresia!.bosqueId);
               if (_isCoordinador) {
                 _solicitudesPendientes = await _bosqueService.obtenerSolicitudes(_miMembresia!.bosqueId);
+                
+                final firestoreService = FirestoreService();
+                final doc = await firestoreService.getDocument('users', user.id);
+                if (doc.exists && (doc.data() as Map<String, dynamic>)['vistoBienvenidaCoordinador'] != true) {
+                  await firestoreService.updateDocument('users', user.id, {'vistoBienvenidaCoordinador': true});
+                  if (mounted) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _mostrarBienvenidaCoordinador(_miBosqueActual!.nombre);
+                    });
+                  }
+                }
               }
             }
           } catch (e) {
@@ -602,33 +643,122 @@ class _BosqueScreenState extends State<BosqueScreen> {
   }
 
   Widget _buildJoinedView() {
-    return DefaultTabController(
-      length: _isCoordinador ? 3 : 2,
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        body: Column(
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(80),
+        child: Container(
+          padding: const EdgeInsets.only(top: 40),
+          decoration: const BoxDecoration(gradient: LinearGradient(colors: [AppColors.primary, AppColors.primaryDark])),
+          child: Row(
+            children: [
+              if (_isAdmin && _miMembresia == null) 
+                IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => setState(() => _miBosqueActual = null)),
+              Expanded(
+                child: InkWell(
+                  onTap: _mostrarPerfilBosque,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                    child: Row(
+                      children: [
+                        const CircleAvatar(
+                          backgroundColor: Colors.white24,
+                          child: Icon(Icons.forest, color: Colors.white),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(_miBosqueActual?.nombre ?? 'Mi Bosque', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                              const Text('Toca aquí para ver el perfil', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      body: _buildForestChat(),
+    );
+  }
+
+  void _mostrarPerfilBosque() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.9,
+        decoration: const BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
           children: [
             Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(24, 60, 24, 24),
-              decoration: BoxDecoration(gradient: LinearGradient(colors: [AppColors.primary, AppColors.primaryDark]), borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32))),
+              padding: const EdgeInsets.all(24),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+                  Stack(
                     children: [
-                      Expanded(child: Text(_miBosqueActual?.nombre ?? 'Mi Bosque', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white))),
-                      if (_isAdmin && _miMembresia == null) IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => setState(() => _miBosqueActual = null)),
+                      CircleAvatar(
+                        radius: 50,
+                        backgroundColor: AppColors.primary.withOpacity(0.1),
+                        child: const Icon(Icons.forest, size: 50, color: AppColors.primary),
+                      ),
+                      if (_isCoordinador)
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: InkWell(
+                            onTap: () {
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('La carga de imágenes (Supabase) está pendiente de configuración.')));
+                            },
+                            child: const CircleAvatar(
+                              radius: 16,
+                              backgroundColor: AppColors.accentYellow,
+                              child: Icon(Icons.camera_alt, size: 16, color: Colors.white),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  const Text('Territorio de Aventura y Comunidad', style: TextStyle(color: Colors.white70, fontSize: 16, letterSpacing: 0.5)),
+                  const SizedBox(height: 16),
+                  Text(_miBosqueActual?.nombre ?? 'Mi Bosque', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Text(_miBosqueActual?.descripcion ?? '', textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey)),
                 ],
               ),
             ),
-            TabBar(labelColor: AppColors.primary, unselectedLabelColor: Colors.grey, indicatorColor: AppColors.primary, indicatorWeight: 3, tabs: [const Tab(text: 'Miembros'), const Tab(text: 'Chat'), if (_isCoordinador) const Tab(text: 'Solicitudes')]),
-            Expanded(child: TabBarView(children: [_buildForestProfile(), _buildForestChat(), if (_isCoordinador) _buildRequestsTab()])),
+            Expanded(
+              child: DefaultTabController(
+                length: _isCoordinador ? 2 : 1,
+                child: Column(
+                  children: [
+                    TabBar(labelColor: AppColors.primary, indicatorColor: AppColors.primary, tabs: [
+                      const Tab(text: 'Información'),
+                      if (_isCoordinador) const Tab(text: 'Solicitudes'),
+                    ]),
+                    Expanded(
+                      child: TabBarView(
+                        children: [
+                          _buildForestProfile(),
+                          if (_isCoordinador) _buildRequestsTab(),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -668,10 +798,8 @@ class _BosqueScreenState extends State<BosqueScreen> {
     final currentUser = authProvider.user;
 
     return ListView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       children: [
-        const Text('Miembros del Equipo', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-        const SizedBox(height: 16),
         ..._miembrosDelBosque.map((m) {
           final bool isMe = m.usuarioId == currentUser?.id;
           return Container(
@@ -693,7 +821,7 @@ class _BosqueScreenState extends State<BosqueScreen> {
             ),
           );
         }).toList(),
-        if (_miMembresia != null) ...[
+        if (_miMembresia != null && !_isCoordinador) ...[
           const SizedBox(height: 32),
           OutlinedButton.icon(
             onPressed: _abandonarBosque,
@@ -708,7 +836,148 @@ class _BosqueScreenState extends State<BosqueScreen> {
     );
   }
 
+  final _chatController = TextEditingController();
+
   Widget _buildForestChat() {
-    return const Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.forum_outlined, size: 48, color: Colors.grey), SizedBox(height: 16), Text('El chat se habilitará próximamente', style: TextStyle(color: Colors.grey))]));
+    return Column(
+      children: [
+        Expanded(
+          child: StreamBuilder<List<MensajeModel>>(
+            stream: _bosqueService.getMensajesStream(_miBosqueActual!.id),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return const Center(child: Text('Error al cargar mensajes', style: TextStyle(color: Colors.grey)));
+              }
+              final mensajes = snapshot.data ?? [];
+              if (mensajes.isEmpty) {
+                return const Center(child: Text('No hay mensajes aún. ¡Sé el primero en saludar!', style: TextStyle(color: Colors.grey)));
+              }
+              final authProvider = Provider.of<AuthProvider>(context, listen: false);
+              final currentUserId = authProvider.user?.id;
+              
+              return ListView.builder(
+                reverse: true,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                itemCount: mensajes.length,
+                itemBuilder: (context, index) {
+                  final msg = mensajes[index];
+                  final isMe = msg.senderId == currentUserId;
+                  return _buildMessageBubble(msg, isMe);
+                },
+              );
+            },
+          ),
+        ),
+        _buildChatInput(),
+      ],
+    );
+  }
+
+  Widget _buildMessageBubble(MensajeModel msg, bool isMe) {
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8, top: 4),
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isMe ? AppColors.primary : Colors.white,
+          borderRadius: BorderRadius.circular(16).copyWith(
+            bottomRight: isMe ? const Radius.circular(0) : const Radius.circular(16),
+            bottomLeft: !isMe ? const Radius.circular(0) : const Radius.circular(16),
+          ),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (!isMe)
+              Text(msg.senderName, style: const TextStyle(color: AppColors.primaryDark, fontSize: 12, fontWeight: FontWeight.bold)),
+            if (!isMe) const SizedBox(height: 2),
+            Text(msg.message, style: TextStyle(color: isMe ? Colors.white : AppColors.textPrimary, fontSize: 15)),
+            const SizedBox(height: 4),
+            Text(
+              '${msg.timestamp.hour.toString().padLeft(2, '0')}:${msg.timestamp.minute.toString().padLeft(2, '0')}',
+              style: TextStyle(color: isMe ? Colors.white70 : Colors.grey, fontSize: 10),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChatInput() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -2))],
+      ),
+      child: SafeArea(
+        child: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.attach_file, color: Colors.grey),
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Envío de archivos (Supabase) pendiente de configuración')));
+              },
+            ),
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: TextField(
+                  controller: _chatController,
+                  decoration: const InputDecoration(
+                    hintText: 'Escribe un mensaje...',
+                    border: InputBorder.none,
+                  ),
+                  maxLines: null,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            CircleAvatar(
+              backgroundColor: AppColors.primary,
+              child: IconButton(
+                icon: const Icon(Icons.send, color: Colors.white, size: 20),
+                onPressed: _enviarMensajeChat,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _enviarMensajeChat() async {
+    final text = _chatController.text.trim();
+    if (text.isEmpty || _miBosqueActual == null) return;
+    
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final user = authProvider.user;
+    if (user == null) return;
+
+    _chatController.clear();
+    
+    final msg = MensajeModel(
+      id: '',
+      senderId: user.id,
+      senderName: user.name,
+      message: text,
+      timestamp: DateTime.now(),
+    );
+    
+    try {
+      await _bosqueService.enviarMensaje(_miBosqueActual!.id, msg);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al enviar: $e')));
+    }
   }
 }
