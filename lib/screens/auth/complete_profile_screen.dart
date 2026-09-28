@@ -357,7 +357,7 @@ Future<void> _saveProfile() async {
 
                 // Municipio
                 DropdownButtonFormField<String>(
-                  initialValue: _selectedMunicipio,
+                  value: _selectedMunicipio,
                   decoration: const InputDecoration(
                     labelText: 'Municipio *',
                     border: OutlineInputBorder(),
@@ -404,7 +404,7 @@ Future<void> _saveProfile() async {
 
                 // Tipo de documento
                 DropdownButtonFormField<String>(
-                  initialValue: _selectedTipoDocumento,
+                  value: _selectedTipoDocumento,
                   decoration: const InputDecoration(
                     labelText: 'Tipo de documento *',
                     border: OutlineInputBorder(),
@@ -445,7 +445,7 @@ Future<void> _saveProfile() async {
 
                 // Sexo
                 DropdownButtonFormField<String>(
-                  initialValue: _selectedSexo,
+                  value: _selectedSexo,
                   decoration: const InputDecoration(
                     labelText: 'Sexo de nacimiento *',
                     border: OutlineInputBorder(),
@@ -525,7 +525,7 @@ Future<void> _saveProfile() async {
 
                 // Nivel/Rango en el programa
                 DropdownButtonFormField<String>(
-                  initialValue: _selectedRango,
+                  value: _selectedRango,
                   decoration: const InputDecoration(
                     labelText: 'Nivel en el programa *',
                     border: OutlineInputBorder(),

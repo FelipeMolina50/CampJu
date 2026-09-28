@@ -349,7 +349,7 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
 
               // Municipio
               DropdownButtonFormField<String>(
-                initialValue: _selectedMunicipio,
+                value: _selectedMunicipio,
                 decoration: const InputDecoration(
                   labelText: 'Municipio',
                   border: OutlineInputBorder(),
@@ -408,7 +408,7 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
 
               // Género
               DropdownButtonFormField<String>(
-                initialValue: _selectedGenero,
+                value: _selectedGenero,
                 decoration: const InputDecoration(
                   labelText: 'Género',
                   border: OutlineInputBorder(),
@@ -427,7 +427,7 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
 
               // Orientación sexual
               DropdownButtonFormField<String>(
-                initialValue: _selectedOrientacionSexual,
+                value: _selectedOrientacionSexual,
                 decoration: const InputDecoration(
                   labelText: 'Orientación sexual',
                   border: OutlineInputBorder(),
@@ -458,7 +458,7 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
 
               // Discapacidad
               DropdownButtonFormField<String>(
-                initialValue: _selectedDiscapacidad,
+                value: _selectedDiscapacidad,
                 decoration: const InputDecoration(
                   labelText: 'Discapacidad',
                   border: OutlineInputBorder(),
@@ -477,7 +477,7 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
 
               // Grupo poblacional
               DropdownButtonFormField<String>(
-                initialValue: _selectedGrupoPoblacional,
+                value: _selectedGrupoPoblacional,
                 decoration: const InputDecoration(
                   labelText: 'Grupo poblacional',
                   border: OutlineInputBorder(),
@@ -518,7 +518,7 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
 
               // Zona donde vive
               DropdownButtonFormField<String>(
-                initialValue: _selectedZonaDondeVive,
+                value: _selectedZonaDondeVive,
                 decoration: const InputDecoration(
                   labelText: 'Zona donde vive',
                   border: OutlineInputBorder(),
@@ -537,7 +537,7 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
 
               // Nivel educativo
               DropdownButtonFormField<String>(
-                initialValue: _selectedNivelEducativo,
+                value: _selectedNivelEducativo,
                 decoration: const InputDecoration(
                   labelText: 'Nivel educativo',
                   border: OutlineInputBorder(),

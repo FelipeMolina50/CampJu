@@ -125,12 +125,12 @@ class SupabaseStorageService {
 
   /// Abre el explorador de archivos, sube el archivo y devuelve URL + nombre.
   static Future<({String url, String nombre})?> subirArchivoChat(String bosqueId) async {
-    final files = await FilePicker.pickFiles(
+    final result = await FilePicker.platform.pickFiles(
       type: FileType.any,
     );
-    if (files.isEmpty) return null;
+    if (result == null || result.files.isEmpty) return null;
 
-    final archivo = files.first;
+    final archivo = result.files.first;
     if (archivo.path == null) return null;
 
     await _ensureBucket(_bucketChat);
