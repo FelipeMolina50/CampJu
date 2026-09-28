@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../core/constants/app_constants.dart';
-import 'auth_service.dart';
+
 import 'bosque_service.dart';
 import 'package:flutter/foundation.dart';
 

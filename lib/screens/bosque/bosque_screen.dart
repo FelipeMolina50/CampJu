@@ -17,6 +17,10 @@ import '../../../services/admin_service.dart';
 import '../../../services/firestore_service.dart';
 import '../../../services/supabase_storage_service.dart';
 import '../../../models/mensaje_model.dart';
+import '../../../models/inscripcion_model.dart';
+import '../../../models/evento_model.dart';
+import '../../../services/evento_service.dart';
+import '../../../services/reporte_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'widgets/camping_chat_background.dart';
 
@@ -39,6 +43,9 @@ class _BosqueScreenState extends State<BosqueScreen> {
   List<MiembroModel> _miembrosDelBosque = [];
   List<SolicitudModel> _solicitudesPendientes = [];
   Map<String, UserModel> _datosCampistas = {};
+  
+  int _chatLimit = 30;
+  final ScrollController _chatScrollController = ScrollController();
 
   Future<void> _cargarUsuariosMiembros() async {
     final Map<String, UserModel> mapa = {};
@@ -61,6 +68,19 @@ class _BosqueScreenState extends State<BosqueScreen> {
   void initState() {
     super.initState();
     _loadData();
+    _chatScrollController.addListener(() {
+      if (_chatScrollController.position.pixels >= _chatScrollController.position.maxScrollExtent - 50) {
+        setState(() {
+          _chatLimit += 30;
+        });
+      }
+    });
+  }
+  
+  @override
+  void dispose() {
+    _chatScrollController.dispose();
+    super.dispose();
   }
 
   void _mostrarBienvenidaCoordinador(String bosqueNombre) {
@@ -857,18 +877,25 @@ class _BosqueScreenState extends State<BosqueScreen> {
             ),
             Expanded(
               child: DefaultTabController(
-                length: _isCoordinador ? 2 : 1,
+                length: _isCoordinador ? 3 : 1,
                 child: Column(
                   children: [
-                    TabBar(labelColor: AppColors.primary, indicatorColor: AppColors.primary, tabs: [
-                      const Tab(text: 'Información'),
-                      if (_isCoordinador) const Tab(text: 'Solicitudes'),
-                    ]),
+                    TabBar(
+                      labelColor: AppColors.primary,
+                      indicatorColor: AppColors.primary,
+                      isScrollable: _isCoordinador,
+                      tabs: [
+                        const Tab(text: 'Informacion'),
+                        if (_isCoordinador) const Tab(text: 'Ingreso'),
+                        if (_isCoordinador) const Tab(text: 'Inscripciones'),
+                      ],
+                    ),
                     Expanded(
                       child: TabBarView(
                         children: [
                           _buildForestProfile(),
                           if (_isCoordinador) _buildRequestsTab(),
+                          if (_isCoordinador) _buildInscripcionesTab(),
                         ],
                       ),
                     ),
@@ -909,6 +936,215 @@ class _BosqueScreenState extends State<BosqueScreen> {
       ),
     );
   }
+
+  Widget _buildInscripcionesTab() {
+    if (_miBosqueActual == null) return const SizedBox.shrink();
+
+    final eventoService = EventoService();
+    final user = Provider.of<AuthProvider>(context, listen: false).user;
+
+    return StreamBuilder<List<InscripcionModel>>(
+      stream: eventoService.streamInscripcionesBosque(_miBosqueActual!.id),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final inscripciones = (snapshot.data ?? [])
+            .where((i) => i.estado == 'pendiente' || i.estado == 'observada')
+            .toList();
+
+        if (inscripciones.isEmpty) {
+          return const Center(
+            child: Text(
+              'No hay inscripciones a eventos pendientes de revision.',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          );
+        }
+
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.file_download_outlined, size: 18),
+                  label: const Text('Exportar Reporte del Bosque (CSV / Excel)'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                  ),
+                  onPressed: () async {
+                    try {
+                      final todosInsc = snapshot.data ?? [];
+                      final mockEvento = EventoModel(
+                        id: 'bosque_${_miBosqueActual!.id}',
+                        titulo: 'Inscripciones - ${_miBosqueActual!.nombre}',
+                        descripcion: 'Listado de inscripciones del bosque',
+                        lugar: _miBosqueActual!.zona,
+                        municipioSede: _miBosqueActual!.zona,
+                        tipo: 'municipal',
+                        bosquesIds: [_miBosqueActual!.id],
+                        fechaInicio: DateTime.now(),
+                        fechaFin: DateTime.now(),
+                        requiereInscripcion: true,
+                        aprobadosCount: todosInsc.where((i) => i.estado == 'aprobada').length,
+                        creadoPor: user?.id ?? '',
+                        creadorRol: 1,
+                        createdAt: DateTime.now(),
+                      );
+                      await ReporteService.exportarInscripcionesCsv(
+                        evento: mockEvento,
+                        inscripciones: todosInsc,
+                        nombresBosques: {_miBosqueActual!.id: _miBosqueActual!.nombre},
+                      );
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Error al exportar: $e'), backgroundColor: AppColors.error),
+                        );
+                      }
+                    }
+                  },
+                ),
+              ),
+            ),
+            Expanded(
+              child: ListView.separated(
+          padding: const EdgeInsets.all(16),
+          itemCount: inscripciones.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            final insc = inscripciones[index];
+            final esAutoInscripcion = user?.id == insc.uid;
+
+            return Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: AppColors.primary.withOpacity(0.12),
+                        child: Text(
+                          insc.nombre.isNotEmpty ? insc.nombre[0].toUpperCase() : 'C',
+                          style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(insc.nombre, style: const TextStyle(fontWeight: FontWeight.bold)),
+                            Text('Doc: ${insc.documentoId} - ${insc.municipio}',
+                                style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.accent.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          insc.estado.toUpperCase(),
+                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.accent),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (esAutoInscripcion) ...[
+                    const Text(
+                      'No puedes aprobar tu propia inscripcion; la revisara el Super Admin.',
+                      style: TextStyle(fontSize: 12, color: AppColors.error, fontStyle: FontStyle.italic),
+                    ),
+                  ] else ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () async {
+                            final motivoCtrl = TextEditingController();
+                            final confirmar = await showDialog<bool>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: const Text('Rechazar Inscripcion'),
+                                content: TextField(
+                                  controller: motivoCtrl,
+                                  decoration: const InputDecoration(labelText: 'Motivo del rechazo *'),
+                                ),
+                                actions: [
+                                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+                                    onPressed: () => Navigator.pop(ctx, true),
+                                    child: const Text('Rechazar', style: TextStyle(color: Colors.white)),
+                                  ),
+                                ],
+                              ),
+                            );
+
+                            if (confirmar == true && user != null) {
+                              await eventoService.rechazarInscripcion(
+                                inscripcionId: insc.id,
+                                motivo: motivoCtrl.text.trim(),
+                                revisorId: user.id,
+                              );
+                            }
+                          },
+                          child: const Text('Rechazar', style: TextStyle(color: AppColors.error)),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                          onPressed: () async {
+                            if (user == null) return;
+                            try {
+                              await eventoService.aprobarInscripcion(
+                                inscripcionId: insc.id,
+                                eventoId: insc.eventoId,
+                                revisorId: user.id,
+                              );
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Inscripcion aprobada exitosamente')),
+                                );
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+                                );
+                              }
+                            }
+                          },
+                          child: const Text('Aprobar', style: TextStyle(color: Colors.white)),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    ],
+  );
+},
+);
+}
 
   Widget _buildForestProfile() {
     final authProvider = Provider.of<AuthProvider>(context);
@@ -1454,7 +1690,7 @@ class _BosqueScreenState extends State<BosqueScreen> {
         children: [
           Expanded(
             child: StreamBuilder<List<MensajeModel>>(
-              stream: _bosqueService.getMensajesStream(_miBosqueActual!.id),
+              stream: _bosqueService.getMensajesStream(_miBosqueActual!.id, limit: _chatLimit),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -1491,13 +1727,26 @@ class _BosqueScreenState extends State<BosqueScreen> {
                 final currentUserId = authProvider.user?.id;
                 
                 return ListView.builder(
+                  controller: _chatScrollController,
                   reverse: true,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   itemCount: mensajes.length,
                   itemBuilder: (context, index) {
                     final msg = mensajes[index];
                     final isMe = msg.senderId == currentUserId;
-                    return _buildMessageBubble(msg, isMe);
+                    final showDate = index == mensajes.length - 1 ||
+                        !_isSameDay(msg.timestamp, mensajes[index + 1].timestamp);
+
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (showDate) _buildDateSeparator(msg.timestamp),
+                        if (msg.tipo == 'sistema_evento')
+                          _buildSystemMessageBubble(msg)
+                        else
+                          _buildMessageBubble(msg, isMe),
+                      ],
+                    );
                   },
                 );
               },
@@ -1509,10 +1758,106 @@ class _BosqueScreenState extends State<BosqueScreen> {
     );
   }
 
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  Widget _buildDateSeparator(DateTime dt) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}',
+        style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget _buildSystemMessageBubble(MensajeModel msg) {
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.85),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.event_available, color: AppColors.primary, size: 20),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                msg.message,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primaryDark,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmarEliminarMensaje(MensajeModel msg) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: AppColors.error),
+              title: const Text('Eliminar mensaje', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
+              onTap: () async {
+                Navigator.pop(ctx);
+                if (_miBosqueActual != null) {
+                  try {
+                    await _bosqueService.eliminarMensaje(_miBosqueActual!.id, msg.id);
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error al eliminar mensaje: $e'), backgroundColor: AppColors.error),
+                      );
+                    }
+                  }
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.cancel_outlined),
+              title: const Text('Cancelar'),
+              onTap: () => Navigator.pop(ctx),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildMessageBubble(MensajeModel msg, bool isMe) {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
+      child: GestureDetector(
+        onLongPress: () {
+          if (isMe || _isCoordinador || _isAdmin) {
+            _confirmarEliminarMensaje(msg);
+          }
+        },
+        child: Container(
         margin: const EdgeInsets.only(bottom: 8, top: 4),
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.78),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -1645,7 +1990,8 @@ class _BosqueScreenState extends State<BosqueScreen> {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildChatInput() {

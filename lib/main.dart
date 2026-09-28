@@ -29,6 +29,8 @@ import 'screens/perfil/ayuda_soporte_screen.dart';
 import 'screens/home/placeholder_screen.dart';
 import 'screens/admin/admin_panel_screen.dart';
 import 'screens/eventos/calendario_screen.dart';
+import 'screens/eventos/eventos_screen.dart';
+import 'screens/eventos/agenda_screen.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 void main() async {
@@ -110,8 +112,10 @@ class MyApp extends StatelessWidget {
           AppRoutes.notificaciones: (context) => const NotificacionesScreen(),
           AppRoutes.privacidad: (context) => const PrivacidadSeguridadScreen(),
           AppRoutes.ayuda: (context) => const AyudaSoporteScreen(),
-          AppRoutes.cronograma: (context) => const CalendarioScreen(),
-          AppRoutes.calendario: (context) => const CalendarioScreen(),
+          AppRoutes.cronograma: (context) => const EventosScreen(),
+          AppRoutes.eventos: (context) => const EventosScreen(),
+          AppRoutes.calendario: (context) => const AgendaScreen(),
+          AppRoutes.agenda: (context) => const AgendaScreen(),
           AppRoutes.adminPanel: (context) => const AdminPanelScreen(),
         },
         onGenerateRoute: (settings) {

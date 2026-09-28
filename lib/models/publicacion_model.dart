@@ -13,6 +13,8 @@ class PublicacionModel {
   final DateTime createdAt;
   final int likesCount;
   final int commentsCount;
+  final String? eventoId;
+  final String? eventoTitulo;
 
   PublicacionModel({
     required this.id,
@@ -27,6 +29,8 @@ class PublicacionModel {
     required this.createdAt,
     this.likesCount = 0,
     this.commentsCount = 0,
+    this.eventoId,
+    this.eventoTitulo,
   });
 
   factory PublicacionModel.fromMap(Map<String, dynamic> map, String docId) {
@@ -43,6 +47,8 @@ class PublicacionModel {
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       likesCount: map['likesCount'] ?? 0,
       commentsCount: map['commentsCount'] ?? 0,
+      eventoId: map['eventoId'] as String?,
+      eventoTitulo: map['eventoTitulo'] as String?,
     );
   }
 
@@ -59,6 +65,8 @@ class PublicacionModel {
       'createdAt': Timestamp.fromDate(createdAt),
       'likesCount': likesCount,
       'commentsCount': commentsCount,
+      if (eventoId != null) 'eventoId': eventoId,
+      if (eventoTitulo != null) 'eventoTitulo': eventoTitulo,
     };
   }
 }

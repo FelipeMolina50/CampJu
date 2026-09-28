@@ -133,6 +133,11 @@ class SupabaseStorageService {
     final archivo = result.files.first;
     if (archivo.path == null) return null;
 
+    // Control de límite de tamaño de archivo (10 MB)
+    if (archivo.size > 10 * 1024 * 1024) {
+      throw Exception('El archivo seleccionado supera el limite maximo permitido de 10 MB.');
+    }
+
     await _ensureBucket(_bucketChat);
 
     final file = File(archivo.path!);

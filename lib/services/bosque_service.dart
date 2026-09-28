@@ -367,12 +367,13 @@ class BosqueService {
 
   // --- MÉTODOS DEL CHAT ---
 
-  Stream<List<MensajeModel>> getMensajesStream(String bosqueId) {
+  Stream<List<MensajeModel>> getMensajesStream(String bosqueId, {int limit = 30}) {
     return FirebaseFirestore.instance
         .collection(_bosqueCollection)
         .doc(bosqueId)
         .collection('mensajes')
         .orderBy('timestamp', descending: true)
+        .limit(limit)
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => MensajeModel.fromFirestore(doc))
@@ -390,4 +391,18 @@ class BosqueService {
       rethrow;
     }
   }
+
+  Future<void> eliminarMensaje(String bosqueId, String mensajeId) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection(_bosqueCollection)
+          .doc(bosqueId)
+          .collection('mensajes')
+          .doc(mensajeId)
+          .delete();
+    } catch (e) {
+      rethrow;
+    }
+  }
 }
+

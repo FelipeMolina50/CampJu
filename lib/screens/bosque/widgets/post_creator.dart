@@ -10,6 +10,8 @@ import '../../../services/auth_provider.dart';
 import '../../../services/publicacion_service.dart';
 import '../../../services/supabase_storage_service.dart';
 import '../../../services/notification_service.dart';
+import '../../../models/evento_model.dart';
+import '../../../services/evento_service.dart';
 
 class PostCreator extends StatefulWidget {
   final String bosqueId;
@@ -26,6 +28,8 @@ class _PostCreatorState extends State<PostCreator> {
   final _textoCtrl = TextEditingController();
   final List<XFile> _selectedMedia = [];
   bool _isUploading = false;
+  EventoModel? _selectedEvento;
+  final EventoService _eventoService = EventoService();
 
   Future<void> _pickImages() async {
     final picker = ImagePicker();
@@ -91,6 +95,8 @@ class _PostCreatorState extends State<PostCreator> {
         mediaUrls: urls,
         mediaTypes: types,
         createdAt: DateTime.now(),
+        eventoId: _selectedEvento?.id,
+        eventoTitulo: _selectedEvento?.titulo,
       );
 
       await PublicacionService().crearPublicacion(post);
@@ -146,9 +152,28 @@ class _PostCreatorState extends State<PostCreator> {
                   TextField(
                     controller: _tituloCtrl,
                     decoration: const InputDecoration(
-                      labelText: 'Título de la publicación *',
+                      labelText: 'Titulo de la publicacion *',
                       border: OutlineInputBorder(),
                     ),
+                  ),
+                  const SizedBox(height: 16),
+                  StreamBuilder<List<EventoModel>>(
+                    stream: _eventoService.streamEventosUsuario(bosqueId: widget.bosqueId),
+                    builder: (context, snapshot) {
+                      final eventos = snapshot.data ?? [];
+                      return DropdownButtonFormField<EventoModel?>(
+                        value: _selectedEvento,
+                        decoration: const InputDecoration(
+                          labelText: 'Asociar a un evento o campamento (Opcional)',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: [
+                          const DropdownMenuItem(value: null, child: Text('Ninguno (Publicacion general)')),
+                          ...eventos.map((ev) => DropdownMenuItem(value: ev, child: Text(ev.titulo))),
+                        ],
+                        onChanged: (val) => setState(() => _selectedEvento = val),
+                      );
+                    },
                   ),
                   const SizedBox(height: 16),
                   TextField(

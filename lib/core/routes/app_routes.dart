@@ -33,4 +33,6 @@ class AppRoutes {
   // Header Modules
   static const String cronograma = '/cronograma';
   static const String calendario = '/calendario';
+  static const String eventos = '/eventos';
+  static const String agenda = '/agenda';
 }

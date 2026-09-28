@@ -73,16 +73,16 @@ class DashboardScreen extends StatelessWidget {
                   children: [
                     _buildModuleIcon(
                       context: context,
-                      icon: Icons.schedule,
-                      label: 'Cronograma',
-                      route: AppRoutes.cronograma,
+                      icon: Icons.event_available_outlined,
+                      label: 'Eventos',
+                      route: AppRoutes.eventos,
                     ),
                     _buildNotificationIcon(context, user?.id),
                     _buildModuleIcon(
                       context: context,
-                      icon: Icons.calendar_today,
-                      label: 'Calendario',
-                      route: AppRoutes.calendario,
+                      icon: Icons.calendar_month_outlined,
+                      label: 'Agenda',
+                      route: AppRoutes.agenda,
                     ),
                   ],
                 ),

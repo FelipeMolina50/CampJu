@@ -2,105 +2,109 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Funciones auxiliares de autenticación y roles
-    function isAuthenticated() {
-      return request.auth != null;
+    function isAuthenticated() { 
+      return request.auth != null; 
     }
     
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    function isSuperAdminEmail() { 
+      return isAuthenticated() && request.auth.token.email == 'pipeloco3050@gmail.com'; 
     }
     
-    function isSuperAdmin() {
+    function isAdmin() { 
       return isAuthenticated() && (
-        getUserData().role == 2 || 
-        getUserData().email == 'admin@campju.com'
-      );
+        isSuperAdminEmail() || 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 2
+      ); 
     }
     
-    function isCoordinador() {
-      return isAuthenticated() && getUserData().role == 1;
+    function isCoordinador() { 
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 1; 
     }
 
-    // Reglas para Colección de Usuarios
     match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      // Un usuario solo puede editar su perfil; solo el admin puede cambiar 'role' y 'bosqueId'
-      allow update: if isAuthenticated() && (
-        isSuperAdmin() || 
-        (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'bosqueId'])) ||
-        // Permitir asignación de bosque en flujos de aceptación
-        (isCoordinador() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bosqueId', 'fechaIngresoBosque']))
+      allow read: if true; 
+      allow write: if isAuthenticated() && (
+        request.auth.uid == userId || isSuperAdminEmail() || isAdmin() || isCoordinador()
       );
-      allow delete: if isSuperAdmin();
     }
 
-    // Reglas para Publicaciones y Likes
-    match /publicaciones/{postId} {
+    match /bosques/{bosqueId} {
       allow read: if isAuthenticated();
-      allow create: if isCoordinador() || isSuperAdmin();
-      allow update: if isAuthenticated() && (
-        isSuperAdmin() ||
-        resource.data.coordinadorId == request.auth.uid ||
-        // Permitir que cualquier usuario autenticado incremente o decremente el contador de likes o comentarios
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount', 'commentsCount'])
-      );
-      allow delete: if isSuperAdmin() || (isAuthenticated() && resource.data.coordinadorId == request.auth.uid);
+      allow write: if isAuthenticated(); 
+    }
 
+    match /miembros/{miembroId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+    
+    match /solicitudes/{solicitudId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /cursos/{cursoId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdminEmail() || isAdmin();
+    }
+
+    match /mensajes/{mensajeId} {
+      allow read, create: if isAuthenticated();
+      allow delete, update: if isAdmin() || isSuperAdminEmail();
+    }
+
+    match /bosques/{bosqueId}/mensajes/{mensajeId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // FEED DE PUBLICACIONES
+    match /publicaciones/{publicacionId} {
+      allow read: if isAuthenticated();
+      // Solo coordinadores o administradores pueden CREAR o ELIMINAR publicaciones completas
+      allow create: if isCoordinador() || isAdmin() || isSuperAdminEmail();
+      allow delete: if isCoordinador() || isAdmin() || isSuperAdminEmail();
+      
+      // PERMITIR ACTUALIZAR:
+      // 1. Coordinadores / Admin (para editar)
+      // 2. CUALQUIER usuario autenticado cuando cambia el contador de likesCount o commentsCount
+      allow update: if isCoordinador() || isAdmin() || isSuperAdminEmail() || (
+        isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount', 'commentsCount'])
+      );
+
+      // SUBCOLECCIÓN DE LIKES: Cualquier usuario autenticado puede crear/borrar su propio like
       match /likes/{userId} {
         allow read: if isAuthenticated();
         allow create, delete: if isAuthenticated() && request.auth.uid == userId;
       }
 
+      // SUBCOLECCIÓN DE COMENTARIOS: Cualquier usuario autenticado puede comentar
       match /comentarios/{commentId} {
         allow read: if isAuthenticated();
         allow create: if isAuthenticated();
         allow delete: if isAuthenticated() && (
           request.auth.uid == resource.data.usuarioId ||
-          isSuperAdmin() ||
-          isCoordinador()
+          isCoordinador() ||
+          isAdmin() ||
+          isSuperAdminEmail()
         );
       }
     }
 
-    // Reglas para Bosques y Miembros
-    match /bosques/{bosqueId} {
-      allow read: if isAuthenticated();
-      allow create, delete: if isSuperAdmin();
-      allow update: if isSuperAdmin() || (isCoordinador() && resource.data.liderId == request.auth.uid);
-
-      match /miembros/{miembroId} {
-        allow read: if isAuthenticated();
-        allow write: if isSuperAdmin() || isCoordinador();
-      }
-    }
-
-    // Reglas para Solicitudes
-    match /solicitudes/{solicitudId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAuthenticated() && (
-        resource.data.userId == request.auth.uid || 
-        isCoordinador() || 
-        isSuperAdmin()
-      );
-    }
-
-    // Reglas para Eventos de Calendario
+    // EVENTOS Y CALENDARIO
     match /eventos/{eventoId} {
       allow read: if isAuthenticated();
-      allow create: if isCoordinador() || isSuperAdmin();
-      allow update, delete: if isSuperAdmin() || (isCoordinador() && resource.data.creadoPor == request.auth.uid);
+      allow create, update, delete: if isCoordinador() || isAdmin() || isSuperAdminEmail();
     }
 
-    // Reglas para Notificaciones
+    // NOTIFICACIONES
     match /notificaciones/{userId} {
-      allow read, write: if isAuthenticated() && (request.auth.uid == userId || isSuperAdmin() || isCoordinador());
-      
+      allow read, write: if isAuthenticated();
       match /items/{notifId} {
-        allow read, write: if isAuthenticated() && (request.auth.uid == userId || isSuperAdmin() || isCoordinador());
+        allow read, write: if isAuthenticated();
       }
+    }
+
+    match /{document=**} {
+      allow read, write: if isSuperAdminEmail();
     }
   }
 }
