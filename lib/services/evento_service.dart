@@ -1,48 +1,31 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/evento_model.dart';
-import '../models/actividad_model.dart';
 
 class EventoService {
-  static CollectionReference eventosRef(String bosqueId) {
-    return FirebaseFirestore.instance
-        .collection('bosques')
-        .doc(bosqueId)
-        .collection('eventos');
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final String _collection = 'eventos';
+
+  Future<void> crearEvento(EventoModel evento) async {
+    await _firestore.collection(_collection).add(evento.toMap());
   }
 
-  static Future<void> createEvento(String bosqueId, EventoModel evento) async {
-    await eventosRef(bosqueId).add(evento.toJson());
+  Future<void> eliminarEvento(String eventoId) async {
+    await _firestore.collection(_collection).doc(eventoId).delete();
   }
 
-  static Stream<List<EventoModel>> getEventosStream(String bosqueId) {
-    return eventosRef(bosqueId)
-        .orderBy('fecha', descending: true)
+  /// Stream reactivo de eventos visibles para el usuario (globales + los de su bosque)
+  Stream<List<EventoModel>> streamEventosUsuario({String? bosqueId}) {
+    return _firestore
+        .collection(_collection)
+        .orderBy('fechaInicio', descending: false)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => EventoModel.fromJson({
-              'id': doc.id,
-              ...doc.data() as Map<String, dynamic>
-            }))
-            .toList());
-  }
-
-  static Future<void> updateEvento(String bosqueId, String eventoId, EventoModel evento) async {
-    await eventosRef(bosqueId).doc(eventoId).update(evento.toJson());
-  }
-
-  static Future<void> deleteEvento(String bosqueId, String eventoId) async {
-    await eventosRef(bosqueId).doc(eventoId).delete();
-  }
-
-  // Activities related to events
-  static Stream<List<ActividadModel>> getActividadesStream(String eventoId) {
-    return FirebaseFirestore.instance
-        .collection('eventos')
-        .doc(eventoId)
-        .collection('actividades')
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => ActividadModel.fromFirestore(doc))
-            .toList());
+        .map((snapshot) {
+          final todos = snapshot.docs.map((d) => EventoModel.fromMap(d.data(), d.id)).toList();
+          return todos.where((ev) {
+            if (ev.scope == 'global') return true;
+            if (bosqueId != null && ev.bosqueId == bosqueId) return true;
+            return false;
+          }).toList();
+        });
   }
 }

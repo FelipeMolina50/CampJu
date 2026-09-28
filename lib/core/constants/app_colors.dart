@@ -1,32 +1,37 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 
 class AppColors {
-  // PRINCIPAL
-  static const Color primary = Color(0xFF00BFA6); // Emerald Green (used in Cursos)
-  static const Color primaryDark = Color(0xFF009C88); // Hover (Darker Emerald)
+  // PRINCIPAL (Tokens de AppTheme)
+  static const Color primary = AppTheme.primary;
+  static const Color primaryDark = AppTheme.primaryDark;
+  static const Color primaryContainer = AppTheme.primaryContainer;
 
   // ACENTOS
-  static const Color accentYellow = Color(0xFFFBBF24);
-  static const Color accentPink = Color(0xFFF472B6);
+  static const Color accent = AppTheme.accent;
+  static const Color accentYellow = AppTheme.accent;
+  static const Color accentPink = AppTheme.like;
   static const Color accentPurple = Color(0xFFA78BFA);
   static const Color accentBlue = Color(0xFF60A5FA);
+  static const Color secondary = AppTheme.secondary;
   
   // CURSOS
-  static const Color coursePrimary = Color(0xFF00BFA6);
+  static const Color coursePrimary = AppTheme.primary;
 
   // MENSAJES (Chat)
-  static const Color msgSent = Color(0xFF1D9E75);
-  static const Color msgReceived = Color(0xFFF3F4F6);
+  static const Color msgSent = AppTheme.primary;
+  static const Color msgReceived = Color(0xFFEAE8E1);
 
   // FUNCIONAL
-  static const Color location = Color(0xFFF97316);
-  static const Color error = Color(0xFFEF4444);
+  static const Color location = AppTheme.secondary;
+  static const Color error = AppTheme.error;
+  static const Color like = AppTheme.like;
 
-  // GRISES / ESTRUCTURA
-  static const Color surface = Color(0xFFF9FAFB); // Fondo
-  static const Color border = Color(0xFFE5E7EB);
-  static const Color textSecondary = Color(0xFF9CA3AF); // Inactivo
-  static const Color textPrimary = Color(0xFF374151);
+  // ESTRUCTURA
+  static const Color surface = AppTheme.surface;
+  static const Color border = AppTheme.border;
+  static const Color textSecondary = AppTheme.onSurfaceMuted;
+  static const Color textPrimary = AppTheme.onSurface;
   
-  static const Color background = surface;
+  static const Color background = AppTheme.background;
 }

@@ -52,6 +52,20 @@ class PublicacionService {
     return doc.exists;
   }
 
+  Stream<DocumentSnapshot> streamPublicacion(String publicacionId) {
+    return _firestore.collection('publicaciones').doc(publicacionId).snapshots();
+  }
+
+  Stream<bool> streamUserLike(String publicacionId, String usuarioId) {
+    return _firestore
+        .collection('publicaciones')
+        .doc(publicacionId)
+        .collection('likes')
+        .doc(usuarioId)
+        .snapshots()
+        .map((snapshot) => snapshot.exists);
+  }
+
   Future<void> agregarComentario(ComentarioModel comentario) async {
     final postRef = _firestore.collection('publicaciones').doc(comentario.publicacionId);
     final commentRef = postRef.collection('comentarios').doc();
@@ -77,6 +91,24 @@ class PublicacionService {
         .map((snapshot) => snapshot.docs
             .map((doc) => ComentarioModel.fromMap(doc.data(), doc.id))
             .toList());
+  }
+
+  Future<void> eliminarComentario(String publicacionId, String comentarioId) async {
+    final postRef = _firestore.collection('publicaciones').doc(publicacionId);
+    final commentRef = postRef.collection('comentarios').doc(comentarioId);
+
+    await _firestore.runTransaction((transaction) async {
+      final postDoc = await transaction.get(postRef);
+      if (!postDoc.exists) return;
+
+      int currentComments = (postDoc.data()?['commentsCount'] as int?) ?? 1;
+      transaction.delete(commentRef);
+      transaction.update(postRef, {'commentsCount': currentComments > 0 ? currentComments - 1 : 0});
+    });
+  }
+
+  Future<void> eliminarPublicacion(String publicacionId) async {
+    await _firestore.collection('publicaciones').doc(publicacionId).delete();
   }
 }
 

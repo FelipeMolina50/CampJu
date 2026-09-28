@@ -1,0 +1,106 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Funciones auxiliares de autenticación y roles
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function isSuperAdmin() {
+      return isAuthenticated() && (
+        getUserData().role == 2 || 
+        getUserData().email == 'admin@campju.com'
+      );
+    }
+    
+    function isCoordinador() {
+      return isAuthenticated() && getUserData().role == 1;
+    }
+
+    // Reglas para Colección de Usuarios
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      // Un usuario solo puede editar su perfil; solo el admin puede cambiar 'role' y 'bosqueId'
+      allow update: if isAuthenticated() && (
+        isSuperAdmin() || 
+        (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'bosqueId'])) ||
+        // Permitir asignación de bosque en flujos de aceptación
+        (isCoordinador() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bosqueId', 'fechaIngresoBosque']))
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // Reglas para Publicaciones y Likes
+    match /publicaciones/{postId} {
+      allow read: if isAuthenticated();
+      allow create: if isCoordinador() || isSuperAdmin();
+      allow update: if isAuthenticated() && (
+        isSuperAdmin() ||
+        resource.data.coordinadorId == request.auth.uid ||
+        // Permitir que cualquier usuario autenticado incremente o decremente el contador de likes o comentarios
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount', 'commentsCount'])
+      );
+      allow delete: if isSuperAdmin() || (isAuthenticated() && resource.data.coordinadorId == request.auth.uid);
+
+      match /likes/{userId} {
+        allow read: if isAuthenticated();
+        allow create, delete: if isAuthenticated() && request.auth.uid == userId;
+      }
+
+      match /comentarios/{commentId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        allow delete: if isAuthenticated() && (
+          request.auth.uid == resource.data.usuarioId ||
+          isSuperAdmin() ||
+          isCoordinador()
+        );
+      }
+    }
+
+    // Reglas para Bosques y Miembros
+    match /bosques/{bosqueId} {
+      allow read: if isAuthenticated();
+      allow create, delete: if isSuperAdmin();
+      allow update: if isSuperAdmin() || (isCoordinador() && resource.data.liderId == request.auth.uid);
+
+      match /miembros/{miembroId} {
+        allow read: if isAuthenticated();
+        allow write: if isSuperAdmin() || isCoordinador();
+      }
+    }
+
+    // Reglas para Solicitudes
+    match /solicitudes/{solicitudId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid || 
+        isCoordinador() || 
+        isSuperAdmin()
+      );
+    }
+
+    // Reglas para Eventos de Calendario
+    match /eventos/{eventoId} {
+      allow read: if isAuthenticated();
+      allow create: if isCoordinador() || isSuperAdmin();
+      allow update, delete: if isSuperAdmin() || (isCoordinador() && resource.data.creadoPor == request.auth.uid);
+    }
+
+    // Reglas para Notificaciones
+    match /notificaciones/{userId} {
+      allow read, write: if isAuthenticated() && (request.auth.uid == userId || isSuperAdmin() || isCoordinador());
+      
+      match /items/{notifId} {
+        allow read, write: if isAuthenticated() && (request.auth.uid == userId || isSuperAdmin() || isCoordinador());
+      }
+    }
+  }
+}

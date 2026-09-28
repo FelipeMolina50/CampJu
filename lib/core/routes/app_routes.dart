@@ -28,6 +28,7 @@ class AppRoutes {
   static const String notificaciones = '/notificaciones';
   static const String privacidad = '/privacidad';
   static const String ayuda = '/ayuda';
+  static const String adminPanel = '/admin-panel';
   
   // Header Modules
   static const String cronograma = '/cronograma';

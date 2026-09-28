@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'services/auth_provider.dart';
 import 'core/routes/app_routes.dart';
+import 'core/theme/app_theme.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/home/home_screen.dart';
@@ -26,6 +27,8 @@ import 'screens/perfil/notificaciones_screen.dart';
 import 'screens/perfil/privacidad_seguridad_screen.dart';
 import 'screens/perfil/ayuda_soporte_screen.dart';
 import 'screens/home/placeholder_screen.dart';
+import 'screens/admin/admin_panel_screen.dart';
+import 'screens/eventos/calendario_screen.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 void main() async {
@@ -68,10 +71,7 @@ class MyApp extends StatelessWidget {
           Locale('es', 'ES'),
           Locale('en', 'US'),
         ],
-        theme: ThemeData(
-          primarySwatch: Colors.green,
-          useMaterial3: true,
-        ),
+        theme: AppTheme.lightTheme,
         initialRoute: '/',
         routes: {
           '/': (context) => const AuthWrapper(),
@@ -110,8 +110,9 @@ class MyApp extends StatelessWidget {
           AppRoutes.notificaciones: (context) => const NotificacionesScreen(),
           AppRoutes.privacidad: (context) => const PrivacidadSeguridadScreen(),
           AppRoutes.ayuda: (context) => const AyudaSoporteScreen(),
-          AppRoutes.cronograma: (context) => const PlaceholderScreen(title: 'Cronograma'),
-          AppRoutes.calendario: (context) => const PlaceholderScreen(title: 'Calendario'),
+          AppRoutes.cronograma: (context) => const CalendarioScreen(),
+          AppRoutes.calendario: (context) => const CalendarioScreen(),
+          AppRoutes.adminPanel: (context) => const AdminPanelScreen(),
         },
         onGenerateRoute: (settings) {
           final uri = Uri.parse(settings.name ?? '');

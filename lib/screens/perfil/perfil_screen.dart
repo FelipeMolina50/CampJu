@@ -24,7 +24,20 @@ class PerfilScreen extends StatelessWidget {
       );
     }
 
+    final user = authProvider.user;
+    if (user == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     final menuItems = [
+      if (user.role.index == 2)
+        {
+          'icon': Icons.admin_panel_settings_outlined,
+          'label': 'Panel de Administracion',
+          'action': () => Navigator.pushNamed(context, AppRoutes.adminPanel),
+        },
       {
         'icon': Icons.edit,
         'label': 'Editar Perfil',
@@ -32,7 +45,7 @@ class PerfilScreen extends StatelessWidget {
       },
       {
         'icon': Icons.settings,
-        'label': 'Configuración',
+        'label': 'Configuracion',
         'action': () => Navigator.pushNamed(context, AppRoutes.configuracion),
       },
       {
@@ -51,13 +64,6 @@ class PerfilScreen extends StatelessWidget {
         'action': () => Navigator.pushNamed(context, AppRoutes.ayuda),
       },
     ];
-
-    final user = authProvider.user;
-    if (user == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
 
     return Scaffold(
       backgroundColor: AppColors.surface,
