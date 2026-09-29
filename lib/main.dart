@@ -44,7 +44,7 @@ void main() async {
   // 2. Supabase (Solo para Storage: imágenes y archivos)
   await Supabase.initialize(
     url: 'https://uokhyfggtamxjiwywkpe.supabase.co',
-    anonKey: 'sb_secret_JZVYdNQljmRH4rkz4YVdYA_xsd-NELE',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVva2h5ZmdndGFteGppd3l3a3BlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk2MTAyODQsImV4cCI6MjEwNTE4NjI4NH0.DKIztwXn4rd4iQp1Ni2N9AwheCp879A8nfpxBtDJ3jQ',
   );
 
   await MessagingService.initialize();

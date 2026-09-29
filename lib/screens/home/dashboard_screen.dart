@@ -8,8 +8,15 @@ import '../../services/notification_service.dart';
 import '../bosque/widgets/bosque_feed_widget.dart';
 import '../bosque/widgets/post_creator.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  bool _isHeaderExpanded = true;
 
   Future<void> _handleLogout(BuildContext context) async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -30,70 +37,106 @@ class DashboardScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: null, // Sin título
+        title: null,
         backgroundColor: AppColors.primary,
         elevation: 0,
         actions: [
+          // Iconos compactos que aparecen cuando el banner se colapsa
+          if (!_isHeaderExpanded) ...[
+            _buildAppBarIcon(
+              icon: Icons.event_available_outlined,
+              tooltip: 'Eventos',
+              onTap: () => Navigator.pushNamed(context, AppRoutes.eventos),
+            ),
+            _buildAppBarNotificationIcon(user?.id),
+            _buildAppBarIcon(
+              icon: Icons.calendar_month_outlined,
+              tooltip: 'Agenda',
+              onTap: () => Navigator.pushNamed(context, AppRoutes.agenda),
+            ),
+            const SizedBox(width: 4),
+          ],
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
             onPressed: () => _handleLogout(context),
-            tooltip: 'Cerrar Sesión',
+            tooltip: 'Cerrar sesion',
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Header dinámico sin título "Inicio"
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-            decoration: const BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(32),
-                bottomRight: Radius.circular(32),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '¡Hola, ${user?.name ?? 'Campista'}!',
-                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+      body: NotificationListener<ScrollNotification>(
+        onNotification: (notification) {
+          if (notification is ScrollUpdateNotification) {
+            final pixels = notification.metrics.pixels;
+            if (pixels > 30 && _isHeaderExpanded) {
+              setState(() => _isHeaderExpanded = false);
+            } else if (pixels <= 5 && !_isHeaderExpanded) {
+              setState(() => _isHeaderExpanded = true);
+            }
+          }
+          return false;
+        },
+        child: Column(
+          children: [
+            // Banner expandido con saludo + iconos grandes
+            AnimatedCrossFade(
+              firstChild: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+                decoration: const BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(32),
+                    bottomRight: Radius.circular(32),
+                  ),
                 ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Bienvenido de nuevo a la comunidad CampJu.',
-                  style: TextStyle(color: Colors.white70, fontSize: 15),
-                ),
-                const SizedBox(height: 24),
-                // Íconos Módulos
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildModuleIcon(
-                      context: context,
-                      icon: Icons.event_available_outlined,
-                      label: 'Eventos',
-                      route: AppRoutes.eventos,
+                    Text(
+                      '¡Hola, ${user?.name ?? 'Campista'}!',
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-                    _buildNotificationIcon(context, user?.id),
-                    _buildModuleIcon(
-                      context: context,
-                      icon: Icons.calendar_month_outlined,
-                      label: 'Agenda',
-                      route: AppRoutes.agenda,
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Bienvenido de nuevo a la comunidad CampJu.',
+                      style: TextStyle(color: Colors.white70, fontSize: 14),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildModuleIcon(
+                          context: context,
+                          icon: Icons.event_available_outlined,
+                          label: 'Eventos',
+                          route: AppRoutes.eventos,
+                        ),
+                        _buildNotificationIcon(context, user?.id),
+                        _buildModuleIcon(
+                          context: context,
+                          icon: Icons.calendar_month_outlined,
+                          label: 'Agenda',
+                          route: AppRoutes.agenda,
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
+              ),
+              secondChild: const SizedBox.shrink(),
+              crossFadeState: _isHeaderExpanded
+                  ? CrossFadeState.showFirst
+                  : CrossFadeState.showSecond,
+              duration: const Duration(milliseconds: 250),
             ),
-          ),
-          
-          Expanded(
-            child: const BosqueFeedWidget(), // Feed global
-          ),
-        ],
+            // Feed de publicaciones
+            const Expanded(child: BosqueFeedWidget()),
+          ],
+        ),
       ),
       floatingActionButton: (user?.role.index == 1 || user?.role.index == 2) 
           ? FloatingActionButton(
@@ -111,7 +154,6 @@ class DashboardScreen extends StatelessWidget {
                     if (query.docs.isNotEmpty) {
                       targetBosqueId = query.docs.first.id;
                       bosqueNombre = query.docs.first.data()['nombre'] ?? 'Bosque';
-                      // Actualizar su perfil de paso
                       await FirebaseFirestore.instance.collection('users').doc(user.id).update({
                         'bosqueId': targetBosqueId,
                       });
@@ -125,7 +167,6 @@ class DashboardScreen extends StatelessWidget {
 
                 if (targetBosqueId == null || targetBosqueId.isEmpty) {
                   if (user?.role.index == 2) {
-                    // Super‑admin: usar bosque global
                     targetBosqueId = 'global';
                     bosqueNombre = 'Comunidad';
                   } else {
@@ -142,15 +183,65 @@ class DashboardScreen extends StatelessWidget {
                 );
               },
               backgroundColor: AppColors.primary,
+              tooltip: 'Crear publicacion',
               child: const Icon(Icons.add, color: Colors.white),
-              tooltip: 'Crear publicación',
             )
           : null,
     );
   }
 
+  // ── Iconos compactos para el AppBar (cuando el banner está colapsado) ──
+
+  Widget _buildAppBarIcon({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return IconButton(
+      icon: Icon(icon, color: Colors.white, size: 22),
+      tooltip: tooltip,
+      onPressed: onTap,
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      constraints: const BoxConstraints(minWidth: 36),
+    );
+  }
+
+  Widget _buildAppBarNotificationIcon(String? userId) {
+    if (userId == null) {
+      return _buildAppBarIcon(
+        icon: Icons.notifications_outlined,
+        tooltip: 'Alertas',
+        onTap: () => Navigator.pushNamed(context, AppRoutes.notificaciones),
+      );
+    }
+    return StreamBuilder<int>(
+      stream: NotificationService().streamUnreadCount(userId),
+      builder: (context, snapshot) {
+        final count = snapshot.data ?? 0;
+        return IconButton(
+          icon: Badge(
+            isLabelVisible: count > 0,
+            label: Text(
+              count > 99 ? '99+' : count.toString(),
+              style: const TextStyle(fontSize: 9, color: Colors.white),
+            ),
+            backgroundColor: Colors.red,
+            child: const Icon(Icons.notifications_outlined, color: Colors.white, size: 22),
+          ),
+          tooltip: 'Alertas',
+          onPressed: () => Navigator.pushNamed(context, AppRoutes.notificaciones),
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          constraints: const BoxConstraints(minWidth: 36),
+        );
+      },
+    );
+  }
+
+  // ── Iconos grandes para el banner expandido ──
+
   Widget _buildNotificationIcon(BuildContext context, String? userId) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         InkWell(
           onTap: () => Navigator.pushNamed(context, AppRoutes.notificaciones),
@@ -180,7 +271,7 @@ class DashboardScreen extends StatelessWidget {
                 : const Icon(Icons.notifications, color: Colors.white, size: 28),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         const Text(
           'Alertas',
           style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500),
@@ -196,6 +287,7 @@ class DashboardScreen extends StatelessWidget {
     required String route,
   }) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         InkWell(
           onTap: () => Navigator.pushNamed(context, route),
@@ -209,7 +301,7 @@ class DashboardScreen extends StatelessWidget {
             child: Icon(icon, color: Colors.white, size: 28),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         Text(
           label,
           style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500),
