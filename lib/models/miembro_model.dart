@@ -7,6 +7,7 @@ class MiembroModel {
   final String rol;
   final DateTime fechaIngreso;
   final DateTime updatedAt;
+  final DateTime? lastReadAt;
 
   MiembroModel({
     required this.id,
@@ -16,6 +17,7 @@ class MiembroModel {
     required this.rol,
     required this.fechaIngreso,
     required this.updatedAt,
+    this.lastReadAt,
   });
 
   factory MiembroModel.fromJson(Map<String, dynamic> json) {
@@ -27,6 +29,7 @@ class MiembroModel {
       rol: json['rol'] as String,
       fechaIngreso: DateTime.parse(json['fechaIngreso'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
+      lastReadAt: json['lastReadAt'] != null ? DateTime.parse(json['lastReadAt'] as String) : null,
     );
   }
 
@@ -39,6 +42,7 @@ class MiembroModel {
       'rol': rol,
       'fechaIngreso': fechaIngreso.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      if (lastReadAt != null) 'lastReadAt': lastReadAt!.toIso8601String(),
     };
   }
 }

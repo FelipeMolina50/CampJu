@@ -155,6 +155,9 @@ class _BosqueScreenState extends State<BosqueScreen> {
         
         if (_miMembresia != null) {
           try {
+            // Actualizar ultima lectura
+            _bosqueService.actualizarUltimaLectura(_miMembresia!.id);
+            
             _miBosqueActual = await _bosqueService.obtenerBosque(_miMembresia!.bosqueId);
             
             if (_miBosqueActual == null) {
@@ -992,7 +995,7 @@ class _BosqueScreenState extends State<BosqueScreen> {
                         requiereInscripcion: true,
                         aprobadosCount: todosInsc.where((i) => i.estado == 'aprobada').length,
                         creadoPor: user?.id ?? '',
-                        creadorRol: 1,
+                        creadorRol: 'coordinador',
                         createdAt: DateTime.now(),
                       );
                       await ReporteService.exportarInscripcionesCsv(

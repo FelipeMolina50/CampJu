@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../models/evento_model.dart';
+import '../../models/inscripcion_model.dart';
 import '../../services/auth_provider.dart';
 import '../../services/evento_service.dart';
 

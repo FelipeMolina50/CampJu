@@ -107,7 +107,8 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final ev = eventos[index];
-                    final puedeBorrar = (user?.role.index == 2) || (user?.role.index == 1 && ev.bosqueId == user?.bosqueId);
+                    final puedeBorrar = (user?.role.index == 2) || (user?.role.index == 1 && ev.creadoPor == user?.id);
+                    final isGlobal = ev.tipo == 'nacional' || ev.tipo == 'departamental' || ev.tipo == 'interzonal';
 
                     return Container(
                       padding: const EdgeInsets.all(16),
@@ -124,15 +125,15 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: ev.scope == 'global' ? AppColors.primary.withOpacity(0.12) : AppColors.secondary.withOpacity(0.12),
+                                  color: isGlobal ? AppColors.primary.withOpacity(0.12) : AppColors.secondary.withOpacity(0.12),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
-                                  ev.scope == 'global' ? 'Global' : (ev.bosqueNombre ?? 'Bosque'),
+                                  isGlobal ? 'Global' : 'Bosque',
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
-                                    color: ev.scope == 'global' ? AppColors.primary : AppColors.secondary,
+                                    color: isGlobal ? AppColors.primary : AppColors.secondary,
                                   ),
                                 ),
                               ),
@@ -171,7 +172,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                               const SizedBox(width: 16),
                               const Icon(Icons.person_outline, size: 14, color: AppColors.textSecondary),
                               const SizedBox(width: 4),
-                              Text(ev.responsable, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                              Text(ev.creadorRol.toUpperCase(), style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                             ],
                           ),
                         ],
@@ -224,14 +225,12 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                 titulo: tituloCtrl.text.trim(),
                 descripcion: descCtrl.text.trim(),
                 lugar: lugarCtrl.text.trim(),
-                responsable: '${user.name} ${user.apellidos}'.trim(),
-                tipo: 'actividad',
-                scope: scope,
-                bosqueId: scope == 'bosque' ? user.bosqueId : null,
-                bosqueNombre: scope == 'bosque' ? 'Mi Bosque' : null,
+                tipo: scope == 'global' ? 'nacional' : 'actividad',
+                bosquesIds: scope == 'bosque' && user.bosqueId != null ? [user.bosqueId!] : [],
                 fechaInicio: fecha,
                 fechaFin: fecha.add(const Duration(hours: 2)),
                 creadoPor: user.id,
+                creadorRol: user.role.index == 2 ? 'admin' : 'coordinador',
                 createdAt: DateTime.now(),
               );
 

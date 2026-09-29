@@ -227,6 +227,18 @@ class BosqueService {
     }
   }
 
+  Future<void> actualizarUltimaLectura(String miembroId) async {
+    try {
+      await _firestoreService.updateDocument(
+        _miembroCollection,
+        miembroId,
+        {'lastReadAt': DateTime.now().toIso8601String()},
+      );
+    } catch (e) {
+      debugPrint('Error actualizando última lectura: $e');
+    }
+  }
+
   Future<SolicitudModel?> obtenerMiSolicitud(String userId) async {
     try {
       final snapshot = await _firestoreService.getCollectionDocuments(
