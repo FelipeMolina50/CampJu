@@ -4,11 +4,13 @@ import 'package:provider/provider.dart';
 
 import 'package:share_plus/share_plus.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../models/bosque_model.dart';
 import '../../../models/user_model.dart';
 import '../../../models/evento_model.dart';
 import '../../../models/inscripcion_model.dart';
 import '../../../services/auth_provider.dart';
+import '../../../services/admin_service.dart';
 import '../../../services/bosque_service.dart';
 import '../../../services/evento_service.dart';
 import '../../../services/reporte_service.dart';
@@ -24,6 +26,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
   late TabController _tabController;
   final BosqueService _bosqueService = BosqueService();
   final EventoService _eventoService = EventoService();
+  final AdminService _adminService = AdminService();
   String _searchUserQuery = '';
   EventoModel? _selectedEvento;
   String _filtroEstadoInscripcion = 'aprobada';
@@ -470,82 +473,240 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> with SingleTickerPr
     final nombreCtrl = TextEditingController();
     final descCtrl = TextEditingController();
     final zonaCtrl = TextEditingController();
+    final buscarCtrl = TextEditingController();
+
+    String? coordinadorSeleccionadoId;
+    String? coordinadorSeleccionadoNombre;
+    String? errorMessage;
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Nuevo Bosque'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nombreCtrl,
-                decoration: const InputDecoration(labelText: 'Nombre del Bosque *', border: OutlineInputBorder()),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Nuevo Bosque'),
+          content: SizedBox(
+            width: MediaQuery.of(context).size.width * 0.9,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (errorMessage != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        errorMessage!,
+                        style: const TextStyle(color: Colors.red, fontSize: 12),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  TextField(
+                    controller: nombreCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Nombre del Bosque *',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: zonaCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Municipio / Zona *',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: descCtrl,
+                    maxLines: 2,
+                    decoration: const InputDecoration(
+                      labelText: 'Descripción',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  const Text(
+                    'Asignar Coordinador *',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: buscarCtrl,
+                    decoration: InputDecoration(
+                      hintText: 'Buscar por nombre o documento...',
+                      prefixIcon: const Icon(Icons.search, size: 20),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    onChanged: (val) => setDialogState(() {}),
+                  ),
+                  const SizedBox(height: 8),
+                  FutureBuilder<List<Map<String, dynamic>>>(
+                    future: _adminService.obtenerCandidatosACoordinador(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) {
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(12),
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+                      }
+
+                      final query = buscarCtrl.text.toLowerCase();
+                      final candidatos = snapshot.data!.where((c) {
+                        if (c['email'] == AppConstants.superAdminEmail) return false;
+                        final name = (c['name'] ?? '').toString().toLowerCase();
+                        final apellidos = (c['apellidos'] ?? '').toString().toLowerCase();
+                        final doc = (c['numeroDocumento'] ?? '').toString().toLowerCase();
+                        final fullName = '$name $apellidos';
+                        return fullName.contains(query) || doc.contains(query);
+                      }).toList();
+
+                      if (candidatos.isEmpty) {
+                        return const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: Text(
+                            'No hay candidatos a coordinador disponibles.',
+                            style: TextStyle(color: Colors.grey, fontSize: 13),
+                          ),
+                        );
+                      }
+
+                      return Container(
+                        height: 150,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: ListView.separated(
+                          separatorBuilder: (context, index) => const Divider(height: 1),
+                          itemCount: candidatos.length,
+                          itemBuilder: (ctx, idx) {
+                            final c = candidatos[idx];
+                            final name = c['name'] ?? '';
+                            final apellidos = c['apellidos'] ?? '';
+                            final doc = c['numeroDocumento'] ?? 'Sin doc';
+                            final isSelected = coordinadorSeleccionadoId == c['uid'];
+
+                            return ListTile(
+                              visualDensity: VisualDensity.compact,
+                              title: Text(
+                                '$name $apellidos',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
+                              subtitle: Text('ID: $doc', style: const TextStyle(fontSize: 11)),
+                              selected: isSelected,
+                              selectedTileColor: AppColors.primary.withOpacity(0.1),
+                              onTap: () => setDialogState(() {
+                                coordinadorSeleccionadoId = c['uid'];
+                                coordinadorSeleccionadoNombre = '$name $apellidos';
+                                errorMessage = null;
+                              }),
+                            );
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                  if (coordinadorSeleccionadoId != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.check_circle, color: AppColors.primary, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Coordinador: $coordinadorSeleccionadoNombre',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: zonaCtrl,
-                decoration: const InputDecoration(labelText: 'Municipio / Zona *', border: OutlineInputBorder()),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: descCtrl,
-                maxLines: 3,
-                decoration: const InputDecoration(labelText: 'Descripcion', border: OutlineInputBorder()),
-              ),
-            ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+              onPressed: () async {
+                if (nombreCtrl.text.trim().isEmpty || zonaCtrl.text.trim().isEmpty) {
+                  setDialogState(() {
+                    errorMessage = 'Nombre y zona son requeridos.';
+                  });
+                  return;
+                }
+                if (coordinadorSeleccionadoId == null) {
+                  setDialogState(() {
+                    errorMessage = 'Debes seleccionar un coordinador para el bosque.';
+                  });
+                  return;
+                }
+
+                Navigator.pop(ctx);
+
+                final nuevoBosque = BosqueModel(
+                  id: FirebaseFirestore.instance.collection('bosques').doc().id,
+                  nombre: nombreCtrl.text.trim(),
+                  descripcion: descCtrl.text.trim(),
+                  zona: zonaCtrl.text.trim(),
+                  liderId: coordinadorSeleccionadoId!,
+                  fotoUrl: '',
+                  miembros: 1,
+                  createdAt: DateTime.now(),
+                  updatedAt: DateTime.now(),
+                );
+
+                try {
+                  await _bosqueService.crearBosque(
+                    nuevoBosque,
+                    currentUser.id,
+                    coordinadorSeleccionadoId!,
+                    coordinadorSeleccionadoNombre!,
+                  );
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Bosque creado exitosamente')),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error al crear bosque: $e'),
+                        backgroundColor: AppColors.error,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text('Crear', style: TextStyle(color: Colors.white)),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            onPressed: () async {
-              if (nombreCtrl.text.trim().isEmpty || zonaCtrl.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Nombre y zona son requeridos')),
-                );
-                return;
-              }
-
-              Navigator.pop(ctx);
-
-              final nuevoBosque = BosqueModel(
-                id: FirebaseFirestore.instance.collection('bosques').doc().id,
-                nombre: nombreCtrl.text.trim(),
-                descripcion: descCtrl.text.trim(),
-                zona: zonaCtrl.text.trim(),
-                liderId: currentUser.id,
-                fotoUrl: '',
-                miembros: 1,
-                createdAt: DateTime.now(),
-                updatedAt: DateTime.now(),
-              );
-
-              try {
-                await _bosqueService.crearBosque(
-                  nuevoBosque,
-                  currentUser.id,
-                  currentUser.id,
-                  '${currentUser.name} ${currentUser.apellidos}'.trim(),
-                );
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Bosque creado exitosamente')),
-                  );
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error al crear bosque: $e'), backgroundColor: AppColors.error),
-                  );
-                }
-              }
-            },
-            child: const Text('Crear', style: TextStyle(color: Colors.white)),
-          ),
-        ],
       ),
     );
   }

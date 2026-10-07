@@ -94,13 +94,23 @@ class BosqueService {
         throw Exception('No tienes permisos para crear el bosque. Detalles: $e');
       }
 
-      // 4. Actualizar rol del nuevo coordinador y asignarle el bosqueId
+      // 4. Actualizar rol del nuevo coordinador y asignarle el bosqueId (sin degradar a Admins/SuperAdmins)
       try {
-        await _firestoreService.updateDocument('users', coordinadorId, {
-          'role': 1, // Ascender a coordinador
-          'bosqueId': bosque.id, // Asignar el bosque
+        final coordDoc = await _firestoreService.getDocument('users', coordinadorId);
+        final coordData = coordDoc.data() as Map<String, dynamic>?;
+        final bool isCoordAdmin = coordData != null &&
+            ((coordData['role'] ?? 0) == 2 || coordData['email'] == AppConstants.superAdminEmail);
+
+        final Map<String, dynamic> updateData = {
+          'bosqueId': bosque.id,
           'fechaIngresoBosque': DateTime.now().toIso8601String(),
-        });
+        };
+
+        if (!isCoordAdmin) {
+          updateData['role'] = 1; // Ascender a coordinador solo si no es Admin / Super Admin
+        }
+
+        await _firestoreService.updateDocument('users', coordinadorId, updateData);
       } catch (e) {
         debugPrint('Error actualizando rol y bosqueId del coordinador: $e');
       }

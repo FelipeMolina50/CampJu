@@ -475,4 +475,46 @@ class SupabaseStorageService {
       throw StorageException('Error obteniendo URL firmada: $e');
     }
   }
+
+  // ──────────────────────────────────────────
+  // DOMINIO: MANTENIMIENTO Y LIMPIEZA DE BUCKETS
+  // ──────────────────────────────────────────
+
+  /// Elimina todos los archivos contenidos en todos los buckets de Supabase.
+  static Future<void> vaciarTodosLosBuckets() async {
+    _requireAuth();
+    final buckets = [
+      bucketChat,
+      bucketBosques,
+      bucketUsuarios,
+      bucketMedia,
+      bucketInscripciones,
+    ];
+    for (final bucket in buckets) {
+      await _vaciarBucket(bucket);
+    }
+  }
+
+  static Future<void> _vaciarBucket(String bucketName, [String path = '']) async {
+    try {
+      final objects = await _client.storage.from(bucketName).list(path: path);
+      final pathsToRemove = <String>[];
+
+      for (final item in objects) {
+        final itemPath = path.isEmpty ? item.name : '$path/${item.name}';
+        if (item.id == null || item.id!.isEmpty) {
+          // Directorio -> recurrir
+          await _vaciarBucket(bucketName, itemPath);
+        } else {
+          pathsToRemove.add(itemPath);
+        }
+      }
+
+      if (pathsToRemove.isNotEmpty) {
+        await _client.storage.from(bucketName).remove(pathsToRemove);
+      }
+    } catch (e) {
+      debugPrint('[StorageService] Error vaciando bucket $bucketName (path: $path): $e');
+    }
+  }
 }

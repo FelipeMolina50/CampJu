@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../core/constants/app_constants.dart';
 
 import 'bosque_service.dart';
+import 'supabase_storage_service.dart';
 import 'package:flutter/foundation.dart';
 
 class AdminService {
@@ -112,43 +113,72 @@ class AdminService {
     }
   }
 
-  /// LIMPIEZA TOTAL: Borra bosques, miembros, solicitudes y usuarios (excepto superAdmin)
+  /// Helper para eliminar una colección y sus subcolecciones en Firestore
+  Future<void> _eliminarColeccion(String nombreColeccion, [List<String> subcolecciones = const []]) async {
+    try {
+      final snap = await _firestore.collection(nombreColeccion).get();
+      for (var doc in snap.docs) {
+        for (var sub in subcolecciones) {
+          final subSnap = await doc.reference.collection(sub).get();
+          for (var subDoc in subSnap.docs) {
+            await subDoc.reference.delete();
+          }
+        }
+        await doc.reference.delete();
+      }
+    } catch (e) {
+      debugPrint('Error borrando coleccion $nombreColeccion: $e');
+    }
+  }
+
+  /// LIMPIEZA TOTAL: Borra bosques, miembros, solicitudes, publicaciones, eventos,
+  /// inscripciones, mensajes, notificaciones, usuarios (excepto superAdmin) y TODOS los archivos de Supabase Storage.
   Future<void> resetDatabase() async {
     try {
-      // 1. Borrar Bosques
-      final bosques = await _firestore.collection('bosques').get();
-      for (var doc in bosques.docs) {
-        await doc.reference.delete();
-      }
+      // 1. Borrar Bosques y sus subcolecciones de mensajes
+      await _eliminarColeccion('bosques', ['mensajes']);
 
       // 2. Borrar Miembros
-      final miembros = await _firestore.collection('miembros').get();
-      for (var doc in miembros.docs) {
-        await doc.reference.delete();
-      }
+      await _eliminarColeccion('miembros');
 
       // 3. Borrar Solicitudes
-      final solicitudes = await _firestore.collection('solicitudes').get();
-      for (var doc in solicitudes.docs) {
-        await doc.reference.delete();
-      }
+      await _eliminarColeccion('solicitudes');
 
-      // 4. Borrar Usuarios (EXCEPTO Super Admin)
+      // 4. Borrar Publicaciones (con sus subcolecciones de likes y comentarios)
+      await _eliminarColeccion('publicaciones', ['likes', 'comentarios']);
+
+      // 5. Borrar Eventos
+      await _eliminarColeccion('eventos');
+
+      // 6. Borrar Inscripciones
+      await _eliminarColeccion('inscripciones');
+
+      // 7. Borrar Mensajes generales
+      await _eliminarColeccion('mensajes');
+
+      // 8. Borrar Notificaciones
+      await _eliminarColeccion('notificaciones', ['items']);
+
+      // 9. Borrar Usuarios (EXCEPTO Super Admin)
       final usuarios = await _firestore.collection('users').get();
       for (var doc in usuarios.docs) {
         final data = doc.data();
         if (data['email'] != AppConstants.superAdminEmail) {
           await doc.reference.delete();
         } else {
-          // Limpiar el bosqueId del super admin también
+          // Limpiar el bosqueId del super admin y mantener su rol de Super Admin / Admin
           await doc.reference.update({
-            'bosqueId': null,
-            'fechaIngresoBosque': null,
+            'bosqueId': FieldValue.delete(),
+            'fechaIngresoBosque': FieldValue.delete(),
             'role': 2, // Asegurar que sigue siendo Admin
           });
         }
       }
-      debugPrint('Reset de base de datos completado con éxito');
+
+      // 10. Limpiar TODOS los buckets de Supabase Storage (imágenes, videos, documentos, fotos de perfil)
+      await SupabaseStorageService.vaciarTodosLosBuckets();
+
+      debugPrint('Reset de base de datos y almacenamiento de Supabase completado con éxito');
     } catch (e) {
       debugPrint('Error en resetDatabase: $e');
       rethrow;
