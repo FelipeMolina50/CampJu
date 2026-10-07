@@ -22,6 +22,7 @@ import '../../../models/evento_model.dart';
 import '../../../services/evento_service.dart';
 import '../../../services/reporte_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../eventos/revision_inscripcion_screen.dart';
 import 'widgets/camping_chat_background.dart';
 
 class BosqueScreen extends StatefulWidget {
@@ -1023,121 +1024,92 @@ class _BosqueScreenState extends State<BosqueScreen> {
             final insc = inscripciones[index];
             final esAutoInscripcion = user?.id == insc.uid;
 
-            return Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
+            return Card(
+              margin: EdgeInsets.zero,
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.border),
+                side: const BorderSide(color: AppColors.border),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+              elevation: 0,
+              child: InkWell(
+                onTap: () async {
+                  final ev = await eventoService.getEventoById(insc.eventoId);
+                  if (ev == null) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('El evento ya no existe.')),
+                      );
+                    }
+                    return;
+                  }
+                  if (context.mounted) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (ctx) => RevisionInscripcionScreen(inscripcion: insc, evento: ev),
+                      ),
+                    );
+                  }
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      CircleAvatar(
-                        backgroundColor: AppColors.primary.withOpacity(0.12),
-                        child: Text(
-                          insc.nombre.isNotEmpty ? insc.nombre[0].toUpperCase() : 'C',
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
-                        ),
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: AppColors.primary.withOpacity(0.12),
+                            child: Text(
+                              insc.nombre.isNotEmpty ? insc.nombre[0].toUpperCase() : 'C',
+                              style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(insc.nombre, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                Text('Doc: ${insc.documentoId} - ${insc.municipio}',
+                                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.accent.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              insc.estado.toUpperCase(),
+                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.accent),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(insc.nombre, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            Text('Doc: ${insc.documentoId} - ${insc.municipio}',
-                                style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.accent.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          insc.estado.toUpperCase(),
-                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.accent),
-                        ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          const Icon(Icons.info_outline, size: 16, color: AppColors.textSecondary),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              esAutoInscripcion 
+                                  ? 'No puedes aprobar tu propia inscripcion.'
+                                  : 'Toca para revisar documentos.',
+                              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+                        ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  if (esAutoInscripcion) ...[
-                    const Text(
-                      'No puedes aprobar tu propia inscripcion; la revisara el Super Admin.',
-                      style: TextStyle(fontSize: 12, color: AppColors.error, fontStyle: FontStyle.italic),
-                    ),
-                  ] else ...[
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () async {
-                            final motivoCtrl = TextEditingController();
-                            final confirmar = await showDialog<bool>(
-                              context: context,
-                              builder: (ctx) => AlertDialog(
-                                title: const Text('Rechazar Inscripcion'),
-                                content: TextField(
-                                  controller: motivoCtrl,
-                                  decoration: const InputDecoration(labelText: 'Motivo del rechazo *'),
-                                ),
-                                actions: [
-                                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-                                  ElevatedButton(
-                                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                                    onPressed: () => Navigator.pop(ctx, true),
-                                    child: const Text('Rechazar', style: TextStyle(color: Colors.white)),
-                                  ),
-                                ],
-                              ),
-                            );
-
-                            if (confirmar == true && user != null) {
-                              await eventoService.rechazarInscripcion(
-                                inscripcionId: insc.id,
-                                motivo: motivoCtrl.text.trim(),
-                                revisorId: user.id,
-                              );
-                            }
-                          },
-                          child: const Text('Rechazar', style: TextStyle(color: AppColors.error)),
-                        ),
-                        const SizedBox(width: 8),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-                          onPressed: () async {
-                            if (user == null) return;
-                            try {
-                              await eventoService.aprobarInscripcion(
-                                inscripcionId: insc.id,
-                                eventoId: insc.eventoId,
-                                revisorId: user.id,
-                              );
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Inscripcion aprobada exitosamente')),
-                                );
-                              }
-                            } catch (e) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
-                                );
-                              }
-                            }
-                          },
-                          child: const Text('Aprobar', style: TextStyle(color: Colors.white)),
-                        ),
-                      ],
-                    ),
-                  ],
-                ],
+                ),
               ),
             );
           },

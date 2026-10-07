@@ -44,6 +44,7 @@ class InscripcionModel {
   final String? motivo;
   final String? revisadoPor;
   final DateTime? revisadoAt;
+  final DateTime? autorizacionDatosAt;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -63,6 +64,7 @@ class InscripcionModel {
     this.motivo,
     this.revisadoPor,
     this.revisadoAt,
+    this.autorizacionDatosAt,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -89,6 +91,7 @@ class InscripcionModel {
       motivo: map['motivo'] as String?,
       revisadoPor: map['revisadoPor'] as String?,
       revisadoAt: (map['revisadoAt'] as Timestamp?)?.toDate(),
+      autorizacionDatosAt: (map['autorizacionDatosAt'] as Timestamp?)?.toDate(),
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (map['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
@@ -110,6 +113,7 @@ class InscripcionModel {
       if (motivo != null) 'motivo': motivo,
       if (revisadoPor != null) 'revisadoPor': revisadoPor,
       if (revisadoAt != null) 'revisadoAt': Timestamp.fromDate(revisadoAt!),
+      if (autorizacionDatosAt != null) 'autorizacionDatosAt': Timestamp.fromDate(autorizacionDatosAt!),
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
     };

@@ -6,6 +6,7 @@ import '../../models/evento_model.dart';
 import '../../models/inscripcion_model.dart';
 import '../../services/auth_provider.dart';
 import '../../services/evento_service.dart';
+import 'evento_detalle_screen.dart';
 
 class EventosScreen extends StatefulWidget {
   const EventosScreen({super.key});
@@ -89,86 +90,110 @@ class _EventosScreenState extends State<EventosScreen> {
 
     final puedeBorrar = (user?.role.index == 2) || (user?.role.index == 1 && ev.creadoPor == user?.id);
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
+    return Card(
+      margin: EdgeInsets.zero,
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+        side: const BorderSide(color: AppColors.border),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: badgeColor.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  badgeText,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: badgeColor,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              Text(
-                '${ev.fechaInicio.day}/${ev.fechaInicio.month}/${ev.fechaInicio.year}',
-                style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.bold),
-              ),
-              if (puedeBorrar) ...[
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.error),
-                  onPressed: () => _eventoService.eliminarEvento(ev.id),
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            ev.titulo,
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-          ),
-          if (ev.descripcion.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              ev.descripcion,
-              style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+      elevation: 0,
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => EventoDetalleScreen(evento: ev),
             ),
-          ],
-          const SizedBox(height: 10),
-          Row(
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.place_outlined, size: 14, color: AppColors.textSecondary),
-              const SizedBox(width: 4),
-              Text(ev.lugar, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-              if (ev.cupoTotal != null) ...[
-                const Spacer(),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: badgeColor.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      badgeText,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: badgeColor,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${ev.fechaInicio.day}/${ev.fechaInicio.month}/${ev.fechaInicio.year}',
+                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.bold),
+                  ),
+                  if (puedeBorrar) ...[
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.error),
+                      onPressed: () => _eventoService.eliminarEvento(ev.id),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                ev.titulo,
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+              ),
+              if (ev.descripcion.isNotEmpty) ...[
+                const SizedBox(height: 4),
                 Text(
-                  'Cupos: ${ev.aprobadosCount}/${ev.cupoTotal}',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
+                  ev.descripcion,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
                 ),
+              ],
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  const Icon(Icons.place_outlined, size: 14, color: AppColors.textSecondary),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      ev.municipioSede.isNotEmpty ? '${ev.lugar} - ${ev.municipioSede}' : ev.lugar,
+                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (ev.cupoTotal != null) ...[
+                    const SizedBox(width: 8),
+                    Text(
+                      'Cupos: ${ev.aprobadosCount}/${ev.cupoTotal}',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
+                    ),
+                  ],
+                ],
+              ),
+              if (ev.requiereInscripcion) ...[
+                const SizedBox(height: 12),
+                const Divider(height: 1, color: AppColors.border),
+                const SizedBox(height: 8),
+                _buildEstadoInscripcionChip(context, ev, user),
               ],
             ],
           ),
-          if (ev.requiereInscripcion) ...[
-            const SizedBox(height: 12),
-            const Divider(height: 1, color: AppColors.border),
-            const SizedBox(height: 8),
-            _buildEstadoInscripcionBoton(context, ev, user),
-          ],
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildEstadoInscripcionBoton(BuildContext context, EventoModel ev, dynamic user) {
+  Widget _buildEstadoInscripcionChip(BuildContext context, EventoModel ev, dynamic user) {
     if (user == null || user.bosqueId == null || user.bosqueId.isEmpty) {
       return const Text(
         'Debes pertenecer a un bosque para poder inscribirte.',
@@ -176,70 +201,57 @@ class _EventosScreenState extends State<EventosScreen> {
       );
     }
 
-    return StreamBuilder(
+    return StreamBuilder<InscripcionModel?>(
       stream: _eventoService.streamMiInscripcion(ev.id, user.id),
       builder: (context, snapshot) {
         final inscripcion = snapshot.data;
         final estado = inscripcion?.estado ?? 'sin_inscribir';
 
-        if (estado == 'aprobada') {
-          return Row(
-            children: const [
-              Icon(Icons.check_circle, color: AppColors.primary, size: 18),
-              SizedBox(width: 6),
-              Text('Inscripcion Aprobada', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13)),
-            ],
-          );
+        Color color;
+        IconData icon;
+        String text;
+
+        switch (estado) {
+          case 'aprobada':
+            color = AppColors.primary;
+            icon = Icons.check_circle;
+            text = 'Inscripcion Aprobada';
+            break;
+          case 'pendiente':
+            color = AppColors.accent;
+            icon = Icons.schedule;
+            text = 'En revision';
+            break;
+          case 'observada':
+            color = Colors.orange;
+            icon = Icons.warning_amber_rounded;
+            text = 'Documentos observados';
+            break;
+          case 'rechazada':
+            color = AppColors.error;
+            icon = Icons.cancel;
+            text = 'Inscripcion rechazada';
+            break;
+          case 'borrador':
+            color = Colors.blueGrey;
+            icon = Icons.edit_document;
+            text = 'Borrador (incompleta)';
+            break;
+          default:
+            color = AppColors.textSecondary;
+            icon = Icons.add_circle_outline;
+            text = 'Toca para inscribirte';
         }
 
-        if (estado == 'pendiente') {
-          return Row(
-            children: const [
-              Icon(Icons.schedule, color: AppColors.accent, size: 18),
-              SizedBox(width: 6),
-              Text('Inscripcion en revision por tu coordinador', style: TextStyle(color: AppColors.accent, fontSize: 13)),
-            ],
-          );
-        }
-
-        return SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            onPressed: () => _inscribirCampista(context, ev, user),
-            child: const Text('Inscribirme al Campamento', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
+        return Row(
+          children: [
+            Icon(icon, color: color, size: 18),
+            const SizedBox(width: 6),
+            Text(text, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
+          ],
         );
       },
     );
-  }
-
-  void _inscribirCampista(BuildContext context, EventoModel ev, dynamic user) async {
-    final nuevaInscripcion = InscripcionModel(
-      id: '${ev.id}_${user.id}',
-      eventoId: ev.id,
-      uid: user.id,
-      bosqueId: user.bosqueId ?? '',
-      nombre: '${user.name} ${user.apellidos}'.trim(),
-      documentoId: user.numeroDocumento ?? '',
-      municipio: user.municipio ?? '',
-      sexo: user.sexo ?? '',
-      telefono: user.telefono ?? '',
-      estado: 'pendiente',
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-    );
-
-    await _eventoService.enviarInscripcion(nuevaInscripcion);
-
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Inscripcion enviada. Tu coordinador revisara tu solicitud.')),
-      );
-    }
   }
 
   void _mostrarCrearEventoDialog(BuildContext context, dynamic user) {

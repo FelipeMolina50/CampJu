@@ -25,6 +25,7 @@ class SupabaseStorageService {
   static const bucketBosques = 'bosques-fotos';
   static const bucketUsuarios = 'usuarios-fotos';
   static const bucketMedia = 'campju-media';
+  static const bucketInscripciones = 'inscripciones-documentos';
 
   /// Limite maximo de archivo para subidas al chat (10 MB).
   static const _maxFileSizeBytes = 10 * 1024 * 1024;
@@ -433,5 +434,45 @@ class SupabaseStorageService {
         ),
       ),
     );
+  }
+
+  // ──────────────────────────────────────────
+  // DOMINIO: INSCRIPCIONES (BUCKET PRIVADO)
+  // ──────────────────────────────────────────
+
+  static Future<String> subirDocumentoInscripcion({
+    required File file,
+    required String eventoId,
+    required String uid,
+    required String docId,
+    required String extension,
+  }) async {
+    _requireAuth();
+    final path = '$eventoId/$uid/$docId.$extension';
+    try {
+      await _client.storage.from(bucketInscripciones).upload(
+        path,
+        file,
+        fileOptions: const FileOptions(upsert: true),
+      );
+      return path;
+    } on StorageException catch (e) {
+      throw StorageException('Error Supabase al subir documento: ${e.message}');
+    } catch (e) {
+      throw StorageException('Error inesperado al subir documento: $e');
+    }
+  }
+
+  static Future<String> obtenerUrlFirmada(String path) async {
+    _requireAuth();
+    try {
+      final url = await _client.storage.from(bucketInscripciones).createSignedUrl(
+        path,
+        300,
+      );
+      return url;
+    } catch (e) {
+      throw StorageException('Error obteniendo URL firmada: $e');
+    }
   }
 }

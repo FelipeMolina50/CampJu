@@ -95,6 +95,24 @@ service cloud.firestore {
       allow create, update, delete: if isCoordinador() || isAdmin() || isSuperAdminEmail();
     }
 
+    match /inscripciones/{inscripcionId} {
+      allow read: if isAuthenticated() && (
+        resource.data.uid == request.auth.uid || 
+        isAdmin() || isSuperAdminEmail() ||
+        (isCoordinador() && resource.data.bosqueId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.bosqueId)
+      );
+      allow create: if isAuthenticated() && 
+        request.resource.data.uid == request.auth.uid &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.bosqueId != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.bosqueId != '';
+      allow update: if isAuthenticated() && (
+        isAdmin() || isSuperAdminEmail() ||
+        (resource.data.uid == request.auth.uid && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['revisadoPor', 'revisadoAt', 'motivo'])) ||
+        (isCoordinador() && resource.data.bosqueId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.bosqueId && request.auth.uid != resource.data.uid)
+      );
+      allow delete: if isAdmin() || isSuperAdminEmail();
+    }
+
     // NOTIFICACIONES
     match /notificaciones/{userId} {
       allow read, write: if isAuthenticated();

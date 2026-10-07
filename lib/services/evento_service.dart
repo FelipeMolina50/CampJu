@@ -37,6 +37,14 @@ class EventoService {
     await _firestore.collection(_eventosCollection).doc(eventoId).delete();
   }
 
+  Future<EventoModel?> getEventoById(String id) async {
+    final doc = await _firestore.collection(_eventosCollection).doc(id).get();
+    if (doc.exists && doc.data() != null) {
+      return EventoModel.fromMap(doc.data()!, doc.id);
+    }
+    return null;
+  }
+
   /// Stream reactivo de eventos según las reglas del plan 5.4:
   /// Se muestran los eventos dirigidos al bosque del usuario + departamentales y nacionales (abiertos a todos)
   Stream<List<EventoModel>> streamEventosUsuario({String? bosqueId}) {
