@@ -43,6 +43,11 @@ class BottomNavBar extends StatelessWidget {
           activeIcon: Icon(Icons.person),
           label: AppStrings.perfil,
         ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.smart_toy_outlined),
+          activeIcon: Icon(Icons.smart_toy),
+          label: AppStrings.chatbot,
+        ),
       ],
     );
   }

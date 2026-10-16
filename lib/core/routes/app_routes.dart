@@ -11,6 +11,7 @@ class AppRoutes {
   static const String bosque = '/bosque';
   static const String cursos = '/cursos';
   static const String perfil = '/perfil';
+  static const String chatbot = '/chatbot';
   
   // Bosque routes
   static const String bosqueDetalle = '/bosque/:id';

@@ -7,6 +7,7 @@ import '../../screens/bosque/bosque_screen.dart';
 import '../../screens/cursos/cursos_screen.dart';
 import '../../screens/perfil/perfil_screen.dart';
 import '../../services/auth_provider.dart';
+import '../../features/chatbot/presentation/chatbot_screen.dart';
 
 import 'dashboard_screen.dart';
 
@@ -31,11 +32,15 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _currentIndex = index);
   }
 
-  final List<Widget> _tabs = [
+  List<Widget> get _tabs => [
     const DashboardScreen(),
     const BosqueScreen(),
     const CursosScreen(),
     const PerfilScreen(),
+    // ChatbotScreen recibe callback para navegar entre tabs
+    ChatbotScreen(
+      onNavigateTab: (idx) => cambiarTab(idx),
+    ),
   ];
 
   void _onTabTap(BuildContext context, int index) {

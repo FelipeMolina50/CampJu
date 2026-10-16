@@ -1,0 +1,253 @@
+{
+  "version": 1,
+  "faqs": [
+    {
+      "id": "que_es_campju",
+      "categoria": "general",
+      "keywords": ["campju", "app", "aplicacion", "que es", "sirve", "para que"],
+      "frases": ["que es campju", "para que sirve la app"],
+      "respuesta": "CampJu es la app del programa Campamentos Juveniles del Valle de Ubaté. Te permite registrarte, unirte a tu bosque, chatear con tu grupo, ver publicaciones, tomar cursos y recibir avisos de eventos.",
+      "roles": ["*"],
+      "estado": "disponible",
+      "chips": ["Cómo me registro", "Qué es un bosque", "Qué son los ascensos"],
+      "prioridad": 5
+    },
+    {
+      "id": "que_es_campamentos_juveniles",
+      "categoria": "general",
+      "keywords": ["campamentos juveniles", "programa", "mindeporte", "ubate", "valle"],
+      "frases": ["que es el programa campamentos juveniles"],
+      "respuesta": "Campamentos Juveniles es un programa que forma jóvenes como líderes sociales mediante el trabajo en equipo, la educación experiencial y encuentros campamentales en los municipios del Valle de Ubaté.",
+      "roles": ["*"],
+      "chips": ["Qué es un bosque", "Qué es un campista"]
+    },
+    {
+      "id": "registro",
+      "categoria": "cuenta",
+      "keywords": ["registro", "registrar", "crear cuenta", "cuenta", "unirme", "google", "correo"],
+      "frases": ["como me registro", "como creo una cuenta", "quiero registrarme"],
+      "respuesta": "Para registrarte abre la app, elige 'Registrarse' con tu correo y contraseña o usa Google. Acepta los términos de tratamiento de datos (Ley 1581). Si eres menor de edad, necesitas la autorización de tu padre, madre o acudiente.",
+      "roles": ["*"],
+      "chips": ["Menores de edad", "Olvidé mi contraseña"],
+      "prioridad": 8
+    },
+    {
+      "id": "recuperar_contrasena",
+      "categoria": "cuenta",
+      "keywords": ["contrasena", "olvide", "recuperar", "restablecer", "clave", "cambiar contrasena"],
+      "frases": ["olvide mi contrasena", "como recupero mi clave"],
+      "respuesta": "En la pantalla de inicio de sesión toca '¿Olvidaste tu contraseña?', escribe tu correo y recibirás un enlace para crear una nueva. Revisa también la carpeta de spam.",
+      "roles": ["*"],
+      "prioridad": 7
+    },
+    {
+      "id": "menores_autorizacion",
+      "categoria": "privacidad",
+      "keywords": ["menor", "menores", "edad", "padres", "acudiente", "autorizacion", "autorizar"],
+      "frases": ["soy menor de edad puedo registrarme"],
+      "respuesta": "Sí. Los menores pueden participar, pero el tratamiento de sus datos requiere la autorización previa, expresa e informada de sus padres o representantes legales, según la Ley 1581 de 2012.",
+      "roles": ["*"],
+      "chips": ["Cómo protegen mis datos"]
+    },
+    {
+      "id": "proteccion_datos",
+      "categoria": "privacidad",
+      "keywords": ["datos", "privacidad", "seguridad", "habeas", "proteccion", "ley 1581", "informacion personal"],
+      "frases": ["como protegen mis datos", "es seguro mi informacion"],
+      "respuesta": "Tus datos se usan solo para la gestión del programa. La app usa autenticación segura y reglas de acceso por rol, y los archivos multimedia solo se descargan con sesión válida. Puedes ajustar tu privacidad en Perfil → Ajustes.",
+      "roles": ["*"],
+      "accion": "ir_perfil",
+      "prioridad": 6
+    },
+    {
+      "id": "que_es_bosque",
+      "categoria": "bosque",
+      "keywords": ["bosque", "delegacion", "grupo", "municipio", "que es un bosque"],
+      "frases": ["que es un bosque", "que significa bosque"],
+      "respuesta": "Un bosque es la delegación o grupo municipal del programa. Cada bosque tiene un coordinador como líder y un chat grupal exclusivo para sus miembros.",
+      "roles": ["*"],
+      "chips": ["Cómo me uno a un bosque", "Chat del bosque"],
+      "accion": "ir_bosque",
+      "prioridad": 7
+    },
+    {
+      "id": "unirse_bosque",
+      "categoria": "bosque",
+      "keywords": ["unir", "unirme", "ingresar", "solicitud", "pertenecer", "entrar", "bosque"],
+      "frases": ["como me uno a un bosque", "como entro a mi bosque"],
+      "respuesta": "Ve a la pestaña Bosque y envía una solicitud de unión a la delegación de tu municipio. El coordinador la revisará y, al ser aceptada, podrás usar el chat de tu bosque.",
+      "roles": ["campista"],
+      "accion": "ir_bosque",
+      "prioridad": 8
+    },
+    {
+      "id": "chat_bosque",
+      "categoria": "bosque",
+      "keywords": ["chat", "mensaje", "escribir", "conversar", "mensajeria", "grupal"],
+      "frases": ["como uso el chat del bosque"],
+      "respuesta": "El chat del bosque es un canal en tiempo real entre el coordinador y los campistas de tu delegación. Solo puedes verlo si perteneces a ese bosque. Los mensajes necesitan internet para enviarse.",
+      "roles": ["campista", "coordinador"],
+      "accion": "ir_bosque"
+    },
+    {
+      "id": "ascensos",
+      "categoria": "ascensos",
+      "keywords": ["ascenso", "nivel", "grado", "rango", "progresion", "semilla", "raiz", "tallo", "hoja", "flor", "fruto"],
+      "frases": ["que son los ascensos", "como subo de nivel"],
+      "respuesta": "El ascenso es tu grado de progresión en el programa. Los niveles, inspirados en la planta de café, son: semilla, raíz, tallo, hoja, flor y fruto. Cuando tu coordinador te asciende, se desbloquean nuevas lecciones.",
+      "roles": ["*"],
+      "chips": ["Cómo asciendo", "Ver cursos"],
+      "accion": "ir_cursos",
+      "prioridad": 8
+    },
+    {
+      "id": "como_ascender",
+      "categoria": "ascensos",
+      "keywords": ["ascender", "subir", "pasar", "siguiente nivel", "cumplir", "requisitos"],
+      "frases": ["como asciendo", "como paso al siguiente nivel"],
+      "respuesta": "El ascenso lo actualiza tu coordinador cuando cumples los requisitos de formación de tu nivel. Completa tus cursos y participa en las actividades de tu bosque.",
+      "roles": ["campista"]
+    },
+    {
+      "id": "gestionar_ascensos",
+      "categoria": "ascensos",
+      "keywords": ["modificar ascenso", "ascender campista", "actualizar nivel", "cambiar grado"],
+      "frases": ["como ascender a un campista"],
+      "respuesta": "Como coordinador puedes actualizar el ascenso de un campista desde su perfil. Al hacerlo, se le habilita automáticamente el acceso a las lecciones del nuevo nivel.",
+      "roles": ["coordinador", "admin", "superadmin"]
+    },
+    {
+      "id": "cursos",
+      "categoria": "cursos",
+      "keywords": ["curso", "cursos", "capacitacion", "leccion", "formacion", "aprender", "cartilla"],
+      "frases": ["donde veo los cursos", "como tomo un curso"],
+      "respuesta": "En la pestaña Cursos encuentras la formación del programa: lecciones, cartillas técnicas y autoevaluaciones. Algunas lecciones se habilitan según tu nivel de ascenso.",
+      "roles": ["*"],
+      "accion": "ir_cursos",
+      "prioridad": 8
+    },
+    {
+      "id": "publicar_cursos",
+      "categoria": "cursos",
+      "keywords": ["crear curso", "publicar curso", "subir curso", "gestionar curso", "cms"],
+      "frases": ["como publico un curso"],
+      "respuesta": "Los coordinadores pueden gestionar y publicar sus propios cursos virtuales desde la pestaña Cursos. Esta función se encuentra en desarrollo (módulo de formación).",
+      "roles": ["coordinador", "admin", "superadmin"],
+      "estado": "planeado",
+      "accion": "ir_cursos"
+    },
+    {
+      "id": "cartillas_offline",
+      "categoria": "cursos",
+      "keywords": ["cartilla", "pdf", "descargar", "offline", "sin internet", "material"],
+      "frases": ["puedo ver las cartillas sin internet"],
+      "respuesta": "El visor de cartillas técnicas con lectura sin conexión está en desarrollo. Cuando esté disponible, podrás consultarlas aunque estés en zonas con poca señal.",
+      "roles": ["*"],
+      "estado": "planeado"
+    },
+    {
+      "id": "inscripcion_eventos",
+      "categoria": "eventos",
+      "keywords": ["inscribir", "inscripcion", "evento", "encuentro", "cupo", "aforo", "campamento"],
+      "frases": ["como me inscribo a un encuentro", "como me inscribo a un evento"],
+      "respuesta": "La inscripción a encuentros con control de cupos en tiempo real está en desarrollo. Por ahora, tu coordinador te informará los pasos para participar. Te avisaremos por notificación cuando esté disponible.",
+      "roles": ["*"],
+      "estado": "planeado",
+      "chips": ["Notificaciones"],
+      "prioridad": 8
+    },
+    {
+      "id": "calendario_eventos",
+      "categoria": "eventos",
+      "keywords": ["calendario", "fecha", "cuando", "programacion", "agenda", "sede", "mapa", "llegar"],
+      "frases": ["donde veo el calendario", "como llego a la sede"],
+      "respuesta": "El calendario interactivo con filtros y mapas para llegar a las sedes hace parte de las funciones del programa de desarrollo. Revisa Inicio y tus notificaciones para conocer los próximos encuentros.",
+      "roles": ["*"],
+      "estado": "planeado",
+      "accion": "ir_inicio"
+    },
+    {
+      "id": "notificaciones",
+      "categoria": "notificaciones",
+      "keywords": ["notificacion", "alerta", "aviso", "recordatorio", "push", "avisos"],
+      "frases": ["como funcionan las notificaciones", "no me llegan notificaciones"],
+      "respuesta": "CampJu te envía alertas de eventos y recordatorios mediante notificaciones push y locales. Puedes ver el historial y configurar tu privacidad en Perfil → Ajustes. Si no te llegan, revisa los permisos de notificaciones de tu celular.",
+      "roles": ["*"],
+      "accion": "ir_perfil",
+      "prioridad": 6
+    },
+    {
+      "id": "fotos_feed",
+      "categoria": "inicio",
+      "keywords": ["foto", "fotos", "publicar", "publicacion", "feed", "video", "subir", "like", "me gusta"],
+      "frases": ["puedo subir fotos", "como publico una foto"],
+      "respuesta": "En Inicio puedes ver las publicaciones y dar 'me gusta'. Solo los coordinadores y administradores pueden publicar fotos y videos de las actividades del programa.",
+      "roles": ["*"],
+      "accion": "ir_inicio",
+      "prioridad": 6
+    },
+    {
+      "id": "editar_perfil",
+      "categoria": "perfil",
+      "keywords": ["perfil", "editar", "foto de perfil", "cambiar nombre", "datos personales", "actualizar datos", "eps"],
+      "frases": ["como edito mi perfil", "como cambio mi foto"],
+      "respuesta": "En Perfil puedes editar tus datos personales, tu fotografía y tu configuración de privacidad. Mantén tus datos actualizados para que tu coordinador pueda contactarte.",
+      "roles": ["*"],
+      "accion": "ir_perfil",
+      "prioridad": 7
+    },
+    {
+      "id": "roles",
+      "categoria": "cuenta",
+      "keywords": ["rol", "roles", "campista", "coordinador", "administrador", "superadmin", "permisos", "tipo de usuario"],
+      "frases": ["que roles hay en la app"],
+      "respuesta": "Hay tres roles: Campista (usuario principal), Coordinador (lidera un bosque, publica contenido y gestiona ascensos) y SuperAdmin (administra bosques y roles). Cada uno ve funciones distintas.",
+      "roles": ["*"]
+    },
+    {
+      "id": "offline",
+      "categoria": "tecnico",
+      "keywords": ["internet", "offline", "sin conexion", "senal", "sin senal", "funciona sin senal", "datos moviles", "sincronizar"],
+      "frases": ["funciona sin internet", "que pasa si no tengo senal", "funciona sin senal"],
+      "respuesta": "CampJu guarda tu información en el dispositivo y la sincroniza automáticamente cuando vuelve la conexión. Funciones como el chat o actualizar datos en la nube sí necesitan internet.",
+      "roles": ["*"],
+      "prioridad": 6
+    },
+    {
+      "id": "requisitos_celular",
+      "categoria": "tecnico",
+      "keywords": ["celular", "telefono", "android", "ios", "iphone", "compatible", "requisitos", "version"],
+      "frases": ["en que celulares funciona"],
+      "respuesta": "CampJu está pensada para Android e iOS, con un teléfono de gama media en adelante. Mantén la app actualizada desde Play Store o App Store.",
+      "roles": ["*"]
+    },
+    {
+      "id": "pqrs",
+      "categoria": "soporte",
+      "keywords": ["pqrs", "queja", "reclamo", "peticion", "sugerencia", "denuncia"],
+      "frases": ["como envio una queja", "como hago un reclamo"],
+      "respuesta": "Puedes comunicar peticiones, quejas, reclamos o sugerencias a la coordinación del programa. Cuando el módulo PQRS esté disponible en la app, lo encontrarás aquí; mientras tanto, habla con tu coordinador o usa el soporte en Perfil.",
+      "roles": ["*"],
+      "estado": "planeado",
+      "accion": "ir_perfil"
+    },
+    {
+      "id": "soporte",
+      "categoria": "soporte",
+      "keywords": ["ayuda", "soporte", "problema", "error", "falla", "no funciona", "contacto", "reportar"],
+      "frases": ["necesito ayuda", "la app tiene un error"],
+      "respuesta": "Lamento el inconveniente. Prueba cerrar y abrir la app. Si persiste, entra a Perfil → Soporte técnico y cuéntanos qué pasó (qué pantalla, qué hacías) para ayudarte más rápido.",
+      "roles": ["*"],
+      "accion": "ir_perfil",
+      "prioridad": 3
+    },
+    {
+      "id": "quien_es_campista",
+      "categoria": "general",
+      "keywords": ["campista", "joven", "participante", "integrante", "quien es"],
+      "frases": ["que es un campista"],
+      "respuesta": "Un campista es un joven que se vincula voluntariamente al programa para fortalecer sus capacidades, valores y trabajo en equipo mediante educación experiencial.",
+      "roles": ["*"]
+    }
+  ]
+}
