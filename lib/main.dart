@@ -26,15 +26,21 @@ import 'screens/perfil/configuracion_screen.dart';
 import 'screens/perfil/notificaciones_screen.dart';
 import 'screens/perfil/privacidad_seguridad_screen.dart';
 import 'screens/perfil/ayuda_soporte_screen.dart';
-import 'screens/home/placeholder_screen.dart';
 import 'screens/admin/admin_panel_screen.dart';
-import 'screens/eventos/calendario_screen.dart';
 import 'screens/eventos/eventos_screen.dart';
 import 'screens/eventos/agenda_screen.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Cargar variables de entorno (.env)
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    debugPrint("Advertencia: No se pudo cargar el archivo .env: $e");
+  }
 
   // 1. Firebase (Autenticación + Firestore)
   await Firebase.initializeApp(

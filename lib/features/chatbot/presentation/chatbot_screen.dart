@@ -1,8 +1,11 @@
+import 'dart:async';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../services/auth_provider.dart';
 import '../../../models/user_model.dart';
 import '../data/faq_repository.dart';
+import '../domain/gemini_service.dart';
 import '../domain/keyword_chatbot_engine.dart';
 import 'chatbot_controller.dart';
 import 'widgets/chatbot_header.dart';
@@ -27,7 +30,8 @@ class ChatbotScreen extends StatefulWidget {
 class _ChatbotScreenState extends State<ChatbotScreen> {
   late ChatbotController _controller;
   final ScrollController _scrollController = ScrollController();
-  final bool _isOffline = false;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  bool _isOffline = false;
 
   String _getRoleString(UserRole role) {
     return switch (role) {
@@ -44,15 +48,34 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         Provider.of<AuthProvider>(context, listen: false);
 
     _controller = ChatbotController(
-      engine: KeywordChatbotEngine(repository: FaqRepository()),
+      aiEngine: GeminiService(),
+      localEngine: KeywordChatbotEngine(repository: FaqRepository()),
       currentRole: () {
         final role = authProvider.user?.role ?? UserRole.campista;
         return _getRoleString(role);
       },
     );
 
+    _checkInitialConnectivity();
+    _connectivitySubscription =
+        Connectivity().onConnectivityChanged.listen(_updateConnectivity);
+
     _controller.addListener(_onControllerUpdate);
     _controller.start();
+  }
+
+  Future<void> _checkInitialConnectivity() async {
+    final results = await Connectivity().checkConnectivity();
+    _updateConnectivity(results);
+  }
+
+  void _updateConnectivity(List<ConnectivityResult> results) {
+    final offline = !results.any((r) => r != ConnectivityResult.none);
+    if (mounted && _isOffline != offline) {
+      setState(() {
+        _isOffline = offline;
+      });
+    }
   }
 
   void _onControllerUpdate() {
@@ -88,6 +111,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
   @override
   void dispose() {
+    _connectivitySubscription?.cancel();
     _controller.removeListener(_onControllerUpdate);
     _controller.dispose();
     _scrollController.dispose();

@@ -4,6 +4,7 @@ export 'data/models/faq_entry.dart';
 export 'data/models/chat_message.dart';
 export 'domain/chatbot_engine.dart';
 export 'domain/keyword_chatbot_engine.dart';
+export 'domain/gemini_service.dart';
 export 'domain/intent_matcher.dart';
 export 'domain/text_normalizer.dart';
 export 'presentation/chatbot_screen.dart';
