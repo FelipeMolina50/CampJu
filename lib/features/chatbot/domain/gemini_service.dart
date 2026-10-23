@@ -3,8 +3,16 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 
 class GeminiService {
-  late final GenerativeModel _model;
+  late final String _apiKey;
+  late final Content _systemInstruction;
+  late String _primaryModelName;
+  late GenerativeModel _model;
   bool _isInitialized = false;
+
+  static const List<String> fallbackModels = [
+    'gemini-3.5-flash',
+    'gemini-3.5-flash-lite',
+  ];
 
   bool get isConfigured {
     if (!dotenv.isInitialized) return false;
@@ -28,6 +36,12 @@ class GeminiService {
       throw Exception('GEMINI_API_KEY no configurada en el archivo .env');
     }
 
+    _apiKey = apiKey;
+    final envModel = dotenv.env['GEMINI_MODEL']?.trim();
+    _primaryModelName = (envModel != null && envModel.isNotEmpty)
+        ? envModel
+        : 'gemini-3.5-flash';
+
     const systemInstruction = '''
 Eres el asistente virtual oficial de CampJu, una aplicación móvil para gestionar campamentos juveniles en el Valle de Ubaté.
 Conoces y estás integrado con el proyecto de la persona transhumana de la Universidad de Cundinamarca.
@@ -45,10 +59,12 @@ IDIOMA Y TONO:
 6. Sé amable, directo y utiliza emojis relacionados con la naturaleza.
 ''';
 
+    _systemInstruction = Content.system(systemInstruction);
+
     _model = GenerativeModel(
-      model: 'gemini-3.8-flash',
-      apiKey: apiKey,
-      systemInstruction: Content.system(systemInstruction),
+      model: _primaryModelName,
+      apiKey: _apiKey,
+      systemInstruction: _systemInstruction,
     );
 
     _isInitialized = true;
@@ -73,17 +89,39 @@ IDIOMA Y TONO:
   }
 
   Future<String> getBotReply(String userMessage) async {
+    if (!_isInitialized) initialize();
+
+    final sanitized = sanitizeInput(userMessage);
+    final content = [Content.text(sanitized)];
+
+    // 1. Intentar con el modelo primario
     try {
-      if (!_isInitialized) initialize();
-
-      final sanitized = sanitizeInput(userMessage);
-      final content = [Content.text(sanitized)];
       final response = await _model.generateContent(content);
-
       return response.text ??
           'Lo siento, no pude generar una respuesta en este momento. 🌲';
-    } catch (e) {
-      debugPrint('Error en GeminiService: $e');
+    } catch (primaryError) {
+      debugPrint('Advertencia en GeminiService con modelo $_primaryModelName: $primaryError');
+
+      // 2. Si el modelo principal falla (ej. error 503 por alta demanda o no disponible), intentar respaldos
+      for (final fallbackModel in fallbackModels) {
+        if (fallbackModel == _primaryModelName) continue;
+        try {
+          debugPrint('Intentando con modelo de respaldo: $fallbackModel');
+          final fallbackGenerativeModel = GenerativeModel(
+            model: fallbackModel,
+            apiKey: _apiKey,
+            systemInstruction: _systemInstruction,
+          );
+          final response = await fallbackGenerativeModel.generateContent(content);
+          if (response.text != null && response.text!.isNotEmpty) {
+            return response.text!;
+          }
+        } catch (fallbackError) {
+          debugPrint('Error en modelo de respaldo $fallbackModel: $fallbackError');
+        }
+      }
+
+      // Si todos fallaron, relanzar el error para activar el salvavidas local del controlador
       rethrow;
     }
   }
