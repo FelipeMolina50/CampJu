@@ -14,8 +14,8 @@ dependencies {
 
 android {
     namespace = "com.example.campju"
-    compileSdk = 36
-    ndkVersion = "27.0.12077973"
+    compileSdk = 35
+    ndkVersion = "28.2.13676358"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -32,7 +32,7 @@ android {
         applicationId = "com.example.campju"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk = 23
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

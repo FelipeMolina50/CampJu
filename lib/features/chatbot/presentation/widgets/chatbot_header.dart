@@ -27,7 +27,7 @@ class ChatbotHeader extends StatelessWidget implements PreferredSizeWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.4),
+                color: Colors.white.withOpacity(0.4),
                 width: 1.5,
               ),
             ),
@@ -74,7 +74,7 @@ class ChatbotHeader extends StatelessWidget implements PreferredSizeWidget {
                     Text(
                       isOffline ? 'Sin conexión · Sigo disponible' : 'En línea',
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.85),
+                        color: Colors.white.withOpacity(0.85),
                         fontSize: 11,
                         height: 1.2,
                       ),

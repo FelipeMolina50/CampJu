@@ -63,7 +63,15 @@ class _PostCreatorState extends State<PostCreator> {
     
     try {
       final auth = Provider.of<AuthProvider>(context, listen: false);
-      final user = auth!.user!;
+      final user = auth.user;
+      if (user == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Sesión no encontrada. Inicia sesión nuevamente.'), backgroundColor: Colors.red),
+          );
+        }
+        return;
+      }
 
       final List<String> urls = [];
       final List<String> types = [];

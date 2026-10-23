@@ -127,6 +127,12 @@ class _BosqueScreenState extends State<BosqueScreen> {
     return _miMembresia?.rol == 'coordinador' || (_isAdmin && _miBosqueActual != null && _miMembresia == null);
   }
 
+  bool get _puedeVerChat {
+    if (_miBosqueActual == null) return false;
+    // El chat es exclusivo de los miembros activos del bosque
+    return _miMembresia != null && _miMembresia!.bosqueId == _miBosqueActual!.id;
+  }
+
   Future<void> _verBosqueComoAdmin(BosqueModel bosque) async {
     setState(() => _isLoading = true);
     try {
@@ -789,7 +795,9 @@ class _BosqueScreenState extends State<BosqueScreen> {
                                 const Icon(Icons.park, size: 12, color: AppColors.accentYellow),
                                 const SizedBox(width: 4),
                                 Text(
-                                  '${_miembrosDelBosque.length} miembros • Toca para ver perfil',
+                                  _puedeVerChat
+                                      ? '${_miembrosDelBosque.length} miembros • Toca para ver perfil'
+                                      : '${_miembrosDelBosque.length} miembros • Modo Administración',
                                   style: const TextStyle(color: Colors.white70, fontSize: 11),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -812,7 +820,9 @@ class _BosqueScreenState extends State<BosqueScreen> {
           ),
         ),
       ),
-      body: _miBosqueActual != null ? _buildForestChat() : const Center(child: Text('No hay bosque seleccionado')),
+      body: _miBosqueActual != null 
+          ? (_puedeVerChat ? _buildForestChat() : _buildAdminBosqueGestionView())
+          : const Center(child: Text('No hay bosque seleccionado')),
     );
   }
 
@@ -1659,7 +1669,125 @@ class _BosqueScreenState extends State<BosqueScreen> {
     }
   }
 
+  /// Vista de gestión completa para Super Admin / Admin cuando no es miembro del bosque.
+  /// Muestra integrantes, solicitudes pendientes e inscripciones sin exponer el chat privado.
+  Widget _buildAdminBosqueGestionView() {
+    return Column(
+      children: [
+        Container(
+          margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppColors.primaryContainer.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.primary.withOpacity(0.25)),
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.shield_outlined, color: AppColors.primary, size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Gestión del Bosque (Super Admin). Por privacidad de la comunidad, el chat interno es exclusivo de sus integrantes.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.primaryDark,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: DefaultTabController(
+            length: 3,
+            child: Column(
+              children: [
+                TabBar(
+                  labelColor: AppColors.primary,
+                  indicatorColor: AppColors.primary,
+                  unselectedLabelColor: Colors.grey,
+                  tabs: [
+                    Tab(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.people_outline, size: 16),
+                          const SizedBox(width: 4),
+                          Text('Integrantes (${_miembrosDelBosque.length})'),
+                        ],
+                      ),
+                    ),
+                    Tab(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.person_add_outlined, size: 16),
+                          const SizedBox(width: 4),
+                          Text(
+                            _solicitudesPendientes.isNotEmpty
+                                ? 'Ingreso (${_solicitudesPendientes.length})'
+                                : 'Ingreso',
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Tab(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.assignment_outlined, size: 16),
+                          SizedBox(width: 4),
+                          Text('Inscripciones'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      _buildForestProfile(),
+                      _buildRequestsTab(),
+                      _buildInscripcionesTab(),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildForestChat() {
+    if (!_puedeVerChat) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.lock_person_outlined, size: 64, color: Colors.grey[400]),
+              const SizedBox(height: 16),
+              const Text(
+                'Chat privado del bosque',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Por políticas de privacidad, las conversaciones de este chat son exclusivas de los miembros y coordinadores de este bosque.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey, fontSize: 13),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return CampingChatBackground(
       child: Column(
         children: [
