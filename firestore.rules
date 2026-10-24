@@ -53,7 +53,10 @@ service cloud.firestore {
     }
 
     match /bosques/{bosqueId}/mensajes/{mensajeId} {
-      allow read, write: if isAuthenticated();
+      // Privacidad: solo los usuarios pertenecientes al bosque pueden leer y enviar mensajes a su chat
+      allow read, write: if isAuthenticated() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.bosqueId == bosqueId
+      );
     }
 
     // FEED DE PUBLICACIONES

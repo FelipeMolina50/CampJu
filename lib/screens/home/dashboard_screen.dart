@@ -141,10 +141,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       floatingActionButton: (user?.role.index == 1 || user?.role.index == 2) 
           ? FloatingActionButton(
               onPressed: () async {
-                String? targetBosqueId = user?.bosqueId; String? bosqueNombre;
+                String? targetBosqueId = user?.bosqueId;
+                String? bosqueNombre;
                 
-                // Autosanación para coordinadores antiguos
-                if ((targetBosqueId == null || targetBosqueId.isEmpty) && user?.role.index == 1) {
+                // 1. Si el coordinador no tiene bosqueId en su perfil, buscar si es líder de algún bosque
+                if ((targetBosqueId == null || targetBosqueId.isEmpty) && user?.role.index == 1 && user?.id != null) {
                   try {
                     final query = await FirebaseFirestore.instance
                         .collection('bosques')
@@ -153,33 +154,74 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         .get();
                     if (query.docs.isNotEmpty) {
                       targetBosqueId = query.docs.first.id;
-                      bosqueNombre = query.docs.first.data()['nombre'] ?? 'Bosque';
+                      bosqueNombre = query.docs.first.data()['nombre'] as String?;
                       await FirebaseFirestore.instance.collection('users').doc(user.id).update({
                         'bosqueId': targetBosqueId,
                       });
                     }
                   } catch (e) {
-                    debugPrint('Error buscando bosque del coordinador: $e');
+                    debugPrint('Error buscando bosque del coordinador por líder: $e');
+                  }
+                }
+
+                // 2. Si todavía no tiene bosqueId, buscar en la colección de miembros activos
+                if ((targetBosqueId == null || targetBosqueId.isEmpty) && user?.id != null) {
+                  try {
+                    final queryMiembro = await FirebaseFirestore.instance
+                        .collection('miembros')
+                        .where('usuarioId', isEqualTo: user!.id)
+                        .where('activo', isEqualTo: true)
+                        .limit(1)
+                        .get();
+                    if (queryMiembro.docs.isNotEmpty) {
+                      targetBosqueId = queryMiembro.docs.first.data()['bosqueId'] as String?;
+                    }
+                  } catch (e) {
+                    debugPrint('Error buscando membresía del coordinador: $e');
+                  }
+                }
+
+                // 3. Si ya tenemos targetBosqueId y aún no tenemos el nombre, consultarlo en Firestore
+                if (targetBosqueId != null && targetBosqueId.isNotEmpty && (bosqueNombre == null || bosqueNombre.isEmpty)) {
+                  if (targetBosqueId == 'global') {
+                    bosqueNombre = 'Comunidad';
+                  } else {
+                    try {
+                      final bDoc = await FirebaseFirestore.instance.collection('bosques').doc(targetBosqueId).get();
+                      if (bDoc.exists && bDoc.data() != null) {
+                        bosqueNombre = bDoc.data()?['nombre'] as String?;
+                      }
+                    } catch (e) {
+                      debugPrint('Error obteniendo nombre del bosque: $e');
+                    }
                   }
                 }
 
                 if (!context.mounted) return;
 
+                // 4. Validar asignación de bosque según el rol
                 if (targetBosqueId == null || targetBosqueId.isEmpty) {
                   if (user?.role.index == 2) {
                     targetBosqueId = 'global';
                     bosqueNombre = 'Comunidad';
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Debes pertenecer a un bosque para crear publicaciones.')),
+                      const SnackBar(content: Text('Debes pertenecer o estar asignado a un bosque para crear publicaciones.')),
                     );
                     return;
                   }
                 }
+
+                bosqueNombre ??= (targetBosqueId == 'global' ? 'Comunidad' : 'Bosque');
                 
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => PostCreator(bosqueId: targetBosqueId!, bosqueNombre: bosqueNombre!)),
+                  MaterialPageRoute(
+                    builder: (context) => PostCreator(
+                      bosqueId: targetBosqueId!,
+                      bosqueNombre: bosqueNombre!,
+                    ),
+                  ),
                 );
               },
               backgroundColor: AppColors.primary,

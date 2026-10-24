@@ -49,7 +49,7 @@ class _ChipItem extends StatelessWidget {
             color: AppColors.primaryContainer,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: AppColors.primary.withValues(alpha: 0.35),
+              color: AppColors.primary.withOpacity(0.35),
               width: 1,
             ),
           ),

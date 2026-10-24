@@ -126,7 +126,8 @@ class _BosqueFeedWidgetState extends State<BosqueFeedWidget> {
       );
     }
 
-    final userId = Provider.of<AuthProvider>(context, listen: false).user!.id;
+    final user = Provider.of<AuthProvider>(context, listen: false).user;
+    final userId = user?.id ?? '';
 
     return RefreshIndicator(
       onRefresh: _loadPosts,
