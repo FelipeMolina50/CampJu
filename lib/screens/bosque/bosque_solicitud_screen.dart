@@ -46,6 +46,11 @@ class _BosqueSolicitudScreenState extends State<BosqueSolicitudScreen> {
           _solicitudActiva = miSolicitud;
           if (_selectedBosque == null && bosques.isNotEmpty) {
             _selectedBosque = bosques.first;
+          } else if (_selectedBosque != null && bosques.isNotEmpty) {
+            _selectedBosque = bosques.firstWhere(
+              (b) => b.id == _selectedBosque!.id,
+              orElse: () => bosques.first,
+            );
           }
           _isLoadingData = false;
         });
@@ -212,7 +217,7 @@ class _BosqueSolicitudScreenState extends State<BosqueSolicitudScreen> {
           ),
           const SizedBox(height: 20),
           DropdownButtonFormField<BosqueModel>(
-            value: _selectedBosque,
+            value: _bosquesDisponibles.contains(_selectedBosque) ? _selectedBosque : null,
             decoration: const InputDecoration(
               labelText: 'Bosque disponible *',
               border: OutlineInputBorder(),

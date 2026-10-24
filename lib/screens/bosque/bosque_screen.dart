@@ -527,7 +527,13 @@ class _BosqueScreenState extends State<BosqueScreen> {
         content: const Text('Para unirte a un bosque, primero debes completar tus datos personales.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
-          ElevatedButton(onPressed: () { Navigator.pop(context); Navigator.pushNamed(context, AppRoutes.editarPerfil); }, child: const Text('Ir al Perfil')),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, AppRoutes.completeProfile);
+            },
+            child: const Text('Completar Perfil'),
+          ),
         ],
       ),
     );

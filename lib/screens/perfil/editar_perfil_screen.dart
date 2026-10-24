@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -73,15 +74,15 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
     if (user != null) {
       _telefonoController.text = user.telefono;
       _epsController.text = user.eps;
-      _selectedMunicipio = user.municipio;
+      _selectedMunicipio = _municipiosCundinamarca.contains(user.municipio) ? user.municipio : null;
       _fechaIngresoPrograma = user.fechaIngresoPrograma;
-      _selectedGenero = user.genero;
-      _selectedOrientacionSexual = user.orientacionSexual;
-      _selectedDiscapacidad = user.discapacidad;
-      _selectedGrupoPoblacional = user.grupoPoblacional;
+      _selectedGenero = _generos.contains(user.genero) ? user.genero : null;
+      _selectedOrientacionSexual = _orientacionesSexuales.contains(user.orientacionSexual) ? user.orientacionSexual : null;
+      _selectedDiscapacidad = _discapacidades.contains(user.discapacidad) ? user.discapacidad : null;
+      _selectedGrupoPoblacional = _gruposPoblacionales.contains(user.grupoPoblacional) ? user.grupoPoblacional : null;
       _esVictimaConflicto = user.esVictimaConflicto;
-      _selectedZonaDondeVive = user.zonaDondeVive;
-      _selectedNivelEducativo = user.nivelEducativo;
+      _selectedZonaDondeVive = _zonas.contains(user.zonaDondeVive) ? user.zonaDondeVive : null;
+      _selectedNivelEducativo = _nivelesEducativos.contains(user.nivelEducativo) ? user.nivelEducativo : null;
       _ocupacionController.text = user.ocupacion ?? '';
       _numeroResolucionController.text = user.numeroResolucion ?? '';
     }
@@ -318,13 +319,22 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
               TextFormField(
                 controller: _telefonoController,
                 decoration: const InputDecoration(
-                  labelText: 'Teléfono',
+                  labelText: 'Teléfono celular (10 dígitos)',
+                  hintText: 'Ej. 3001234567',
                   border: OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.phone,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(10),
+                ],
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
+                  final cleanVal = value?.trim() ?? '';
+                  if (cleanVal.isEmpty) {
                     return 'Este campo es obligatorio';
+                  }
+                  if (cleanVal.length != 10 || !RegExp(r'^\d{10}$').hasMatch(cleanVal)) {
+                    return 'El número de celular debe tener exactamente 10 dígitos';
                   }
                   return null;
                 },
@@ -349,7 +359,7 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
 
               // Municipio
               DropdownButtonFormField<String>(
-                value: _selectedMunicipio,
+                value: _municipiosCundinamarca.contains(_selectedMunicipio) ? _selectedMunicipio : null,
                 decoration: const InputDecoration(
                   labelText: 'Municipio',
                   border: OutlineInputBorder(),
@@ -408,7 +418,7 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
 
               // Género
               DropdownButtonFormField<String>(
-                value: _selectedGenero,
+                value: _generos.contains(_selectedGenero) ? _selectedGenero : null,
                 decoration: const InputDecoration(
                   labelText: 'Género',
                   border: OutlineInputBorder(),
@@ -427,7 +437,7 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
 
               // Orientación sexual
               DropdownButtonFormField<String>(
-                value: _selectedOrientacionSexual,
+                value: _orientacionesSexuales.contains(_selectedOrientacionSexual) ? _selectedOrientacionSexual : null,
                 decoration: const InputDecoration(
                   labelText: 'Orientación sexual',
                   border: OutlineInputBorder(),
@@ -458,7 +468,7 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
 
               // Discapacidad
               DropdownButtonFormField<String>(
-                value: _selectedDiscapacidad,
+                value: _discapacidades.contains(_selectedDiscapacidad) ? _selectedDiscapacidad : null,
                 decoration: const InputDecoration(
                   labelText: 'Discapacidad',
                   border: OutlineInputBorder(),
@@ -477,7 +487,7 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
 
               // Grupo poblacional
               DropdownButtonFormField<String>(
-                value: _selectedGrupoPoblacional,
+                value: _gruposPoblacionales.contains(_selectedGrupoPoblacional) ? _selectedGrupoPoblacional : null,
                 decoration: const InputDecoration(
                   labelText: 'Grupo poblacional',
                   border: OutlineInputBorder(),
@@ -518,7 +528,7 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
 
               // Zona donde vive
               DropdownButtonFormField<String>(
-                value: _selectedZonaDondeVive,
+                value: _zonas.contains(_selectedZonaDondeVive) ? _selectedZonaDondeVive : null,
                 decoration: const InputDecoration(
                   labelText: 'Zona donde vive',
                   border: OutlineInputBorder(),
@@ -537,7 +547,7 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
 
               // Nivel educativo
               DropdownButtonFormField<String>(
-                value: _selectedNivelEducativo,
+                value: _nivelesEducativos.contains(_selectedNivelEducativo) ? _selectedNivelEducativo : null,
                 decoration: const InputDecoration(
                   labelText: 'Nivel educativo',
                   border: OutlineInputBorder(),

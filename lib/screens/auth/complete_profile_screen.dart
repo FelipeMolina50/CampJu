@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/constants/app_colors.dart';
@@ -58,6 +59,43 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   final List<String> _tiposDocumento = ['TI', 'CC', 'CE', 'Pasaporte'];
   final List<String> _sexos = ['Masculino', 'Femenino', 'Intersexual'];
   final List<String> _rangos = ['Aspirante', 'Semilla', 'Raíz', 'Tallo', 'Hoja', 'Flor', 'Fruto'];
+
+  @override
+  void initState() {
+    super.initState();
+    final user = Provider.of<AuthProvider>(context, listen: false).user;
+    if (user != null) {
+      if (user.name.isNotEmpty) _nameController.text = user.name;
+      if (user.apellidos.isNotEmpty) _apellidosController.text = user.apellidos;
+      if (user.numeroDocumento.isNotEmpty) _numeroDocumentoController.text = user.numeroDocumento;
+      if (user.telefono.isNotEmpty) _telefonoController.text = user.telefono;
+      if (user.eps.isNotEmpty) _epsController.text = user.eps;
+      if (_municipiosCundinamarca.contains(user.municipio)) {
+        _selectedMunicipio = user.municipio;
+      }
+      if (_tiposDocumento.contains(user.tipoDocumento)) {
+        _selectedTipoDocumento = user.tipoDocumento;
+      }
+      if (_sexos.contains(user.sexo)) {
+        _selectedSexo = user.sexo;
+      }
+      if (user.rango.isNotEmpty) {
+        final matchRango = _rangos.firstWhere(
+          (r) => r.toLowerCase() == user.rango.toLowerCase(),
+          orElse: () => '',
+        );
+        if (matchRango.isNotEmpty) {
+          _selectedRango = matchRango;
+        }
+      }
+      if (user.nombreAcudiente != null && user.nombreAcudiente!.isNotEmpty) {
+        _nombreAcudienteController.text = user.nombreAcudiente!;
+      }
+      if (user.telefonoAcudiente != null && user.telefonoAcudiente!.isNotEmpty) {
+        _telefonoAcudienteController.text = user.telefonoAcudiente!;
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -357,7 +395,7 @@ Future<void> _saveProfile() async {
 
                 // Municipio
                 DropdownButtonFormField<String>(
-                  value: _selectedMunicipio,
+                  value: _municipiosCundinamarca.contains(_selectedMunicipio) ? _selectedMunicipio : null,
                   decoration: const InputDecoration(
                     labelText: 'Municipio *',
                     border: OutlineInputBorder(),
@@ -404,7 +442,7 @@ Future<void> _saveProfile() async {
 
                 // Tipo de documento
                 DropdownButtonFormField<String>(
-                  value: _selectedTipoDocumento,
+                  value: _tiposDocumento.contains(_selectedTipoDocumento) ? _selectedTipoDocumento : null,
                   decoration: const InputDecoration(
                     labelText: 'Tipo de documento *',
                     border: OutlineInputBorder(),
@@ -432,11 +470,24 @@ Future<void> _saveProfile() async {
                   controller: _numeroDocumentoController,
                   decoration: const InputDecoration(
                     labelText: 'Número de documento *',
+                    hintText: 'Solo números',
                     border: OutlineInputBorder(),
                   ),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(15),
+                  ],
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
+                    final cleanVal = value?.trim() ?? '';
+                    if (cleanVal.isEmpty) {
                       return 'Este campo es obligatorio';
+                    }
+                    if (!RegExp(r'^\d+$').hasMatch(cleanVal)) {
+                      return 'El número de documento debe contener solo números';
+                    }
+                    if (cleanVal.length < 5) {
+                      return 'El número de documento debe tener al menos 5 dígitos';
                     }
                     return null;
                   },
@@ -445,7 +496,7 @@ Future<void> _saveProfile() async {
 
                 // Sexo
                 DropdownButtonFormField<String>(
-                  value: _selectedSexo,
+                  value: _sexos.contains(_selectedSexo) ? _selectedSexo : null,
                   decoration: const InputDecoration(
                     labelText: 'Sexo de nacimiento *',
                     border: OutlineInputBorder(),
@@ -472,13 +523,22 @@ Future<void> _saveProfile() async {
                 TextFormField(
                   controller: _telefonoController,
                   decoration: const InputDecoration(
-                    labelText: 'Teléfono *',
+                    labelText: 'Teléfono celular (10 dígitos) *',
+                    hintText: 'Ej. 3001234567',
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.phone,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(10),
+                  ],
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
+                    final cleanVal = value?.trim() ?? '';
+                    if (cleanVal.isEmpty) {
                       return 'Este campo es obligatorio';
+                    }
+                    if (cleanVal.length != 10 || !RegExp(r'^\d{10}$').hasMatch(cleanVal)) {
+                      return 'El número de celular debe tener exactamente 10 dígitos';
                     }
                     return null;
                   },
@@ -525,7 +585,7 @@ Future<void> _saveProfile() async {
 
                 // Nivel/Rango en el programa
                 DropdownButtonFormField<String>(
-                  value: _selectedRango,
+                  value: _rangos.contains(_selectedRango) ? _selectedRango : null,
                   decoration: const InputDecoration(
                     labelText: 'Nivel en el programa *',
                     border: OutlineInputBorder(),
@@ -581,13 +641,22 @@ Future<void> _saveProfile() async {
                   TextFormField(
                     controller: _telefonoAcudienteController,
                     decoration: const InputDecoration(
-                      labelText: 'Teléfono del acudiente *',
+                      labelText: 'Teléfono celular del acudiente (10 dígitos) *',
+                      hintText: 'Ej. 3001234567',
                       border: OutlineInputBorder(),
                     ),
                     keyboardType: TextInputType.phone,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(10),
+                    ],
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
+                      final cleanVal = value?.trim() ?? '';
+                      if (cleanVal.isEmpty) {
                         return 'Este campo es obligatorio para menores de edad';
+                      }
+                      if (cleanVal.length != 10 || !RegExp(r'^\d{10}$').hasMatch(cleanVal)) {
+                        return 'El número de celular debe tener exactamente 10 dígitos';
                       }
                       return null;
                     },

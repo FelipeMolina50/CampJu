@@ -87,4 +87,12 @@ class BosqueModel {
       'updatedAt': Timestamp.fromDate(updatedAt),
     };
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BosqueModel && runtimeType == other.runtimeType && id == other.id;
+
+  @override
+  int get hashCode => id.hashCode;
 }
